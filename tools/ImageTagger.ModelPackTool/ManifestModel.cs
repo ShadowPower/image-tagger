@@ -86,14 +86,14 @@ public sealed class PreprocessingDescriptor
 public sealed class StepDescriptor
 {
     [JsonPropertyName("op")]
-    public string Op { get; init; } = "";
+    public string Op { get; set; } = "";
 
     [JsonPropertyName("version")]
-    public int Version { get; init; } = 1;
+    public int Version { get; set; } = 1;
 
     /// <summary>Closed operator parameters are flattened beside op/version in the canonical manifest.</summary>
     [JsonExtensionData]
-    public Dictionary<string, object?> Parameters { get; init; } = [];
+    public Dictionary<string, object?> Parameters { get; set; } = [];
 }
 
 public sealed class OutputContract

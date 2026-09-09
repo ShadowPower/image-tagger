@@ -170,11 +170,14 @@ public static class PackCommand
             Build = build,
         };
 
-        var json = JsonSerializer.Serialize(manifest, new JsonSerializerOptions
+        var jsonOptions = new JsonSerializerOptions
         {
             WriteIndented = true,
             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-        });
+        };
+        var json = JsonSerializer.Serialize(
+            manifest,
+            new ModelPackJsonContext(jsonOptions).ModelManifest);
         File.WriteAllText(Path.Combine(output, PackFiles.Manifest), json.Replace("\r\n", "\n") + "\n", new UTF8Encoding(false));
 
         File.Copy(Path.Combine(source, "LICENSE"), Path.Combine(output, PackFiles.License), overwrite: true);
@@ -253,8 +256,9 @@ public static class ValidateCommand
         if (errors.Count > 0) return errors;
 
         // 3. manifest
-        var manifest = JsonSerializer.Deserialize<ModelManifest>(
-            File.ReadAllText(Path.Combine(root, PackFiles.Manifest)));
+        var manifest = JsonSerializer.Deserialize(
+            File.ReadAllText(Path.Combine(root, PackFiles.Manifest)),
+            ModelPackJsonContext.Default.ModelManifest);
         if (manifest is null) { errors.Add("manifest unreadable"); return errors; }
         ValidateManifest(manifest, root, errors);
 

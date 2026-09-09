@@ -19,6 +19,7 @@ public sealed class PromptSettingsStore : IPromptSettingsStore, IDisposable
     private const int DebounceMilliseconds = 300;
 
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
+    private static readonly ImageTaggerJsonContext JsonContext = new(JsonOptions);
     private readonly object _gate = new();
     private readonly string _settingsPath;
     private PromptSettings? _pending;
@@ -67,7 +68,7 @@ public sealed class PromptSettingsStore : IPromptSettingsStore, IDisposable
                     || version != CurrentSchemaVersion)
                     throw new JsonException("不支持的提示词设置版本。");
 
-                var envelope = JsonSerializer.Deserialize<PromptSettingsEnvelope>(json, JsonOptions)
+                var envelope = JsonSerializer.Deserialize(json, JsonContext.PromptSettingsEnvelope)
                     ?? throw new JsonException("提示词设置内容为空。");
                 var settings = envelope.Settings ?? throw new JsonException("提示词设置对象缺失。");
                 return Validate(settings);
@@ -183,7 +184,7 @@ public sealed class PromptSettingsStore : IPromptSettingsStore, IDisposable
                 SchemaVersion = CurrentSchemaVersion,
                 Settings = settings,
             };
-            var json = JsonSerializer.SerializeToUtf8Bytes(envelope, JsonOptions);
+            var json = JsonSerializer.SerializeToUtf8Bytes(envelope, JsonContext.PromptSettingsEnvelope);
 
             using (var stream = new FileStream(
                 temporaryPath,
@@ -285,11 +286,12 @@ public sealed class PromptSettingsStore : IPromptSettingsStore, IDisposable
             UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
             MaxDepth = 32,
         };
-        options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
+        options.Converters.Add(new JsonStringEnumConverter<GroupSortMode>(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
+        options.Converters.Add(new JsonStringEnumConverter<QualityTagPreset>(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
         return options;
     }
 
-    private sealed record PromptSettingsEnvelope
+    internal sealed record PromptSettingsEnvelope
     {
         public int SchemaVersion { get; init; }
 

@@ -16,6 +16,7 @@ static class Cli
         WriteIndented = false,
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
     };
+    private static readonly CliJsonContext JsonContext = new(Json);
 
     public static async Task<int> MainAsync(string[] args)
     {
@@ -120,8 +121,8 @@ static class Cli
             Console.CancelKeyPress -= cancelHandler;
             return code;
         }
-        catch (OperationCanceledException) { if (jsonl) Emit(JsonSerializer.Serialize(new { schema_version = 1, type = "fatal_error", error = new { code = "canceled", message = "操作已取消。" } }, Json)); else Console.Error.WriteLine("操作已取消。"); return 130; }
-        catch (Exception ex) { if (jsonl) Emit(JsonSerializer.Serialize(new { schema_version = 1, type = "fatal_error", error = ex.Message }, Json)); else Console.Error.WriteLine($"error: {ex.Message}"); return 2; }
+        catch (OperationCanceledException) { if (jsonl) Emit(JsonSerializer.Serialize(new CliCanceledResult(1, "fatal_error", new CliError("canceled", "操作已取消。")), JsonContext.CliCanceledResult)); else Console.Error.WriteLine("操作已取消。"); return 130; }
+        catch (Exception ex) { if (jsonl) Emit(JsonSerializer.Serialize(new CliFatalErrorResult(1, "fatal_error", ex.Message), JsonContext.CliFatalErrorResult)); else Console.Error.WriteLine($"error: {ex.Message}"); return 2; }
     }
 
     private static void WriteResult(ImageDocument image, LoadedModelPack pack, double threshold, bool jsonl)
@@ -134,33 +135,29 @@ static class Cli
             .OrderByDescending(tag => tag.Probability)
             .ThenBy(tag => tag.Index)
             .ToArray();
-        var result = new
-        {
-            schema_version = 1,
-            type = "image_result",
-            status = image.AnalysisState.ToString().ToLowerInvariant(),
-            path = image.CanonicalPath,
-            file_name = image.FileName,
-            format = image.Format,
-            width = image.PixelWidth,
-            height = image.PixelHeight,
-            file_size = image.FileSize,
+        var result = new CliImageResult(
+            1,
+            "image_result",
+            image.AnalysisState.ToString().ToLowerInvariant(),
+            image.CanonicalPath,
+            image.FileName,
+            image.Format,
+            image.PixelWidth,
+            image.PixelHeight,
+            image.FileSize,
             threshold,
-            model = new
-            {
-                id = pack.Descriptor.Id,
-                fingerprint = pack.Fingerprint.Value,
-                runtime = prediction?.Runtime,
-                execution_provider = prediction?.ExecutionProvider,
-                batch_size = prediction?.BatchSize,
-            },
+            new CliModelResult(
+                pack.Descriptor.Id,
+                pack.Fingerprint.Value,
+                prediction?.Runtime,
+                prediction?.ExecutionProvider,
+                prediction?.BatchSize),
             tags,
-            tag_count = tags.Length,
-            prompt = string.Join(", ", tags.Select(tag => tag.Name)),
-            duration_ms = prediction?.Duration.TotalMilliseconds,
-            error = image.LastError,
-        };
-        if (jsonl) Emit(JsonSerializer.Serialize(result, Json)); else WriteHuman(image, pack, threshold, tags);
+            tags.Length,
+            string.Join(", ", tags.Select(tag => tag.Name)),
+            prediction?.Duration.TotalMilliseconds,
+            image.LastError);
+        if (jsonl) Emit(JsonSerializer.Serialize(result, JsonContext.CliImageResult)); else WriteHuman(image, pack, threshold, tags);
     }
 
     private static void WriteHuman(ImageDocument image, LoadedModelPack pack, double threshold, TagResult[] tags)
@@ -212,10 +209,45 @@ static class Cli
         lines.Add(value); return string.Join(Environment.NewLine, lines);
     }
 
-    private static void WriteFailure(ImageImportFailure f, bool jsonl) { if (jsonl) Emit(JsonSerializer.Serialize(new { schema_version = 1, type = "image_result", status = "failed", path = f.Path, file_name = f.FileName, error = new { code = f.Kind.ToString().ToLowerInvariant(), message = f.Message } }, Json)); else Console.Error.WriteLine($"{f.FileName}: {f.Message}"); }
+    private static void WriteFailure(ImageImportFailure f, bool jsonl) { if (jsonl) Emit(JsonSerializer.Serialize(new CliFailureResult(1, "image_result", "failed", f.Path, f.FileName, new CliError(f.Kind.ToString().ToLowerInvariant(), f.Message)), JsonContext.CliFailureResult)); else Console.Error.WriteLine($"{f.FileName}: {f.Message}"); }
     private static void Emit(string text) => Output.WriteLine(text);
     private static string? Option(string[] args, string name) { var i = Array.IndexOf(args, name); return i >= 0 && i + 1 < args.Length ? args[i + 1] : null; }
     private static int Usage() { Console.WriteLine("usage: imagetagger [tag] <inputs...> | model <pack|unpack|validate> ..."); return 2; }
 
-    private sealed record TagResult(int Index, string Name, string? Translation, string Group, float Probability);
 }
+
+internal sealed record CliError(string Code, string Message);
+internal sealed record CliCanceledResult(int SchemaVersion, string Type, CliError Error);
+internal sealed record CliFatalErrorResult(int SchemaVersion, string Type, string Error);
+internal sealed record CliModelResult(string Id, string Fingerprint, string? Runtime, string? ExecutionProvider, int? BatchSize);
+internal sealed record TagResult(int Index, string Name, string? Translation, string Group, float Probability);
+internal sealed record CliImageResult(
+    int SchemaVersion,
+    string Type,
+    string Status,
+    string Path,
+    string FileName,
+    string Format,
+    int Width,
+    int Height,
+    long FileSize,
+    double Threshold,
+    CliModelResult Model,
+    TagResult[] Tags,
+    int TagCount,
+    string Prompt,
+    double? DurationMs,
+    string? Error);
+internal sealed record CliFailureResult(
+    int SchemaVersion,
+    string Type,
+    string Status,
+    string Path,
+    string FileName,
+    CliError Error);
+
+[System.Text.Json.Serialization.JsonSerializable(typeof(CliCanceledResult))]
+[System.Text.Json.Serialization.JsonSerializable(typeof(CliFatalErrorResult))]
+[System.Text.Json.Serialization.JsonSerializable(typeof(CliImageResult))]
+[System.Text.Json.Serialization.JsonSerializable(typeof(CliFailureResult))]
+internal sealed partial class CliJsonContext : System.Text.Json.Serialization.JsonSerializerContext;

@@ -1,0 +1,18 @@
+<Project>
+  <!--
+    Native AOT disables reflection-based System.Text.Json metadata by default and
+    trims constructors/properties reached only through JSON or CsvHelper. Keep the
+    application's serialization surface intact for portable release builds.
+  -->
+  <ItemGroup Condition="'$(PublishAot)' == 'true' And ('$(MSBuildProjectName)' == 'ImageTagger.App' Or '$(MSBuildProjectName)' == 'ImageTagger.Cli')">
+    <TrimmerRootAssembly Include="ImageTagger.Core" />
+    <TrimmerRootAssembly Include="ImageTagger.Infrastructure" />
+    <TrimmerRootAssembly Include="CsvHelper" />
+    <TrimmerRootAssembly Include="MetadataExtractor" />
+    <TrimmerRootAssembly Include="SixLabors.ImageSharp" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(PublishAot)' == 'true' And '$(MSBuildProjectName)' == 'ImageTagger.Cli'">
+    <TrimmerRootAssembly Include="ImageTagger.ModelPackTool" />
+  </ItemGroup>
+</Project>

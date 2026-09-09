@@ -15,6 +15,7 @@ public sealed class SettingsStore : ISettingsStore
     public const string FileName = "settings.json";
 
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
+    private static readonly ImageTaggerJsonContext JsonContext = new(JsonOptions);
     private readonly object _gate = new();
     private readonly string _settingsPath;
 
@@ -59,7 +60,7 @@ public sealed class SettingsStore : ISettingsStore
                 if (!versionElement.TryGetInt32(out var version) || version != CurrentSchemaVersion)
                     throw new JsonException($"Unsupported settings schema version '{versionElement}'.");
 
-                var envelope = JsonSerializer.Deserialize<SettingsEnvelope>(json, JsonOptions)
+                var envelope = JsonSerializer.Deserialize(json, JsonContext.SettingsEnvelope)
                     ?? throw new JsonException("Settings content is empty.");
                 return Validate(envelope.Settings ?? throw new JsonException("The settings object is missing."));
             }
@@ -89,7 +90,7 @@ public sealed class SettingsStore : ISettingsStore
                     SchemaVersion = CurrentSchemaVersion,
                     Settings = settings,
                 };
-                var json = JsonSerializer.SerializeToUtf8Bytes(envelope, JsonOptions);
+                var json = JsonSerializer.SerializeToUtf8Bytes(envelope, JsonContext.SettingsEnvelope);
 
                 using (var stream = new FileStream(
                     temporaryPath,
@@ -123,7 +124,7 @@ public sealed class SettingsStore : ISettingsStore
     }
 
     private static AppSettings DeserializeLegacy(string json) =>
-        JsonSerializer.Deserialize<AppSettings>(json, JsonOptions)
+        JsonSerializer.Deserialize(json, JsonContext.AppSettings)
         ?? throw new JsonException("Legacy settings content is empty.");
 
     private static AppSettings Validate(AppSettings settings)
@@ -189,11 +190,12 @@ public sealed class SettingsStore : ISettingsStore
             UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
             MaxDepth = 32,
         };
-        options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
+        options.Converters.Add(new JsonStringEnumConverter<ThemePreference>(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
+        options.Converters.Add(new JsonStringEnumConverter<AccelerationPreference>(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
         return options;
     }
 
-    private sealed record SettingsEnvelope
+    internal sealed record SettingsEnvelope
     {
         public int SchemaVersion { get; init; }
 

@@ -39,6 +39,7 @@ public sealed class ModelPackReader
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
         MaxDepth = 64,
     };
+    private static readonly ImageTaggerJsonContext JsonContext = new(JsonOptions);
 
     private static readonly Lazy<JsonSchema> ManifestSchema = new(LoadManifestSchema);
 
@@ -64,7 +65,7 @@ public sealed class ModelPackReader
         ManifestDto dto;
         try
         {
-            dto = JsonSerializer.Deserialize<ManifestDto>(manifestJson, JsonOptions)
+            dto = JsonSerializer.Deserialize(manifestJson, JsonContext.ManifestDto)
                 ?? throw new JsonException("manifest is empty");
         }
         catch (JsonException exception)
@@ -97,7 +98,9 @@ public sealed class ModelPackReader
             () => ReadCatalog(Path.Combine(root, descriptor.Catalog), descriptor, cancellationToken),
             cancellationToken).ConfigureAwait(false);
         var manifestHash = hashes["model.json"];
-        var preprocessingJson = JsonSerializer.Serialize(descriptor.Preprocessing, JsonOptions);
+        var preprocessingJson = JsonSerializer.Serialize(
+            descriptor.Preprocessing,
+            JsonContext.PreprocessingPipelineDescriptor);
         var preprocessingHash = Convert.ToHexStringLower(
             SHA256.HashData(Encoding.UTF8.GetBytes(preprocessingJson)));
         var fingerprintValue = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(
@@ -139,7 +142,7 @@ public sealed class ModelPackReader
         ValidateSchema(json);
         try
         {
-            var dto = JsonSerializer.Deserialize<ManifestDto>(json, JsonOptions)
+            var dto = JsonSerializer.Deserialize(json, JsonContext.ManifestDto)
                 ?? throw new JsonException("manifest is empty");
             var descriptor = ToDescriptor(dto);
             ValidateSemanticDescriptor(descriptor);
@@ -396,7 +399,7 @@ public sealed class ModelPackReader
         });
     }
 
-    private sealed record ManifestDto
+    internal sealed record ManifestDto
     {
         public int SchemaVersion { get; init; }
         public required string Id { get; init; }
@@ -412,9 +415,9 @@ public sealed class ModelPackReader
         public Dictionary<string, JsonElement>? Build { get; init; }
     }
 
-    private sealed record GroupDto(string Id, string Name, string DisplayName, string? Strategy);
+    internal sealed record GroupDto(string Id, string Name, string DisplayName, string? Strategy);
 
-    private sealed record InputDto(
+    internal sealed record InputDto(
         string Name,
         string Layout,
         [property: JsonPropertyName("dtype")] string DType,
@@ -422,16 +425,16 @@ public sealed class ModelPackReader
         int Width,
         int Height);
 
-    private sealed record PreprocessingDto(int SchemaVersion, StepDto[] Steps);
+    internal sealed record PreprocessingDto(int SchemaVersion, StepDto[] Steps);
 
-    private sealed record StepDto
+    internal sealed class StepDto
     {
-        public required string Op { get; init; }
-        public int Version { get; init; }
+        public string Op { get; set; } = "";
+        public int Version { get; set; }
 
         [JsonExtensionData]
-        public Dictionary<string, JsonElement> Parameters { get; init; } = new(StringComparer.Ordinal);
+        public Dictionary<string, JsonElement> Parameters { get; set; } = new(StringComparer.Ordinal);
     }
 
-    private sealed record OutputDto(string Name, string Activation, int LabelCount);
+    internal sealed record OutputDto(string Name, string Activation, int LabelCount);
 }
