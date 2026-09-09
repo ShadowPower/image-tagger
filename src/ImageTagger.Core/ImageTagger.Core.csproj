@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Pure domain models, contracts and prompt rules for ImageTagger.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.HighPerformance" />
+    <PackageReference Include="System.Numerics.Tensors" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="ModelPacks\model-pack.schema.json" />
+  </ItemGroup>
+</Project>

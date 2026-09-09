@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata" id="root" xmlns="">
+    <xsd:element name="root" msdata:IsDataSet="true" />
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="AppTitle" xml:space="preserve"><value>Image Tagger</value></data>
+  <data name="Status_Ready" xml:space="preserve"><value>就绪</value></data>
+  <data name="Status_Importing" xml:space="preserve"><value>正在读取图片信息…</value></data>
+  <data name="Status_Recognizing" xml:space="preserve"><value>正在识别…</value></data>
+  <data name="Status_RecognizeDone" xml:space="preserve"><value>识别完成</value></data>
+  <data name="Status_RecognizeCanceled" xml:space="preserve"><value>识别已取消</value></data>
+  <data name="Toast_CopySuccess" xml:space="preserve"><value>已复制</value></data>
+  <data name="Toast_ExportSuccess" xml:space="preserve"><value>导出成功</value></data>
+  <data name="Toast_SkippedDuplicates" xml:space="preserve"><value>已跳过重复文件</value></data>
+  <data name="Toast_NonBlockingError" xml:space="preserve"><value>操作未完成，已记录详细信息</value></data>
+  <data name="Toast_BatchErrorTitle" xml:space="preserve"><value>批量任务摘要</value></data>
+  <data name="Dialog_InstallFailedTitle" xml:space="preserve"><value>模型安装校验失败</value></data>
+  <data name="Dialog_ClearSessionTitle" xml:space="preserve"><value>清空图片会话</value></data>
+  <data name="Dialog_ClearSessionMessage" xml:space="preserve"><value>将清空当前图片列表与识别结果，该操作不删除磁盘文件。正在运行的任务将被取消。是否继续？</value></data>
+  <data name="Dialog_OverwriteTitle" xml:space="preserve"><value>覆盖同名文本</value></data>
+  <data name="Dialog_OverwriteMessage" xml:space="preserve"><value>目标文本文件已存在，是否覆盖？</value></data>
+  <data name="Dialog_LargeImageTitle" xml:space="preserve"><value>超大图片确认</value></data>
+  <data name="Dialog_LargeImageMessage" xml:space="preserve"><value>该图片像素数超过上限，继续处理可能占用大量内存。是否继续？</value></data>
+  <data name="Dialog_Confirm" xml:space="preserve"><value>确认</value></data>
+  <data name="Dialog_Cancel" xml:space="preserve"><value>取消</value></data>
+  <data name="Settings_Title" xml:space="preserve"><value>设置</value></data>
+  <data name="Settings_ModelSection" xml:space="preserve"><value>模型</value></data>
+  <data name="Settings_AppearanceSection" xml:space="preserve"><value>外观与行为</value></data>
+  <data name="Settings_PerformanceSection" xml:space="preserve"><value>性能</value></data>
+  <data name="Settings_InstallPack" xml:space="preserve"><value>安装 Model Pack</value></data>
+  <data name="Settings_ValidateBuiltIn" xml:space="preserve"><value>验证内置模型</value></data>
+  <data name="Settings_Uninstall" xml:space="preserve"><value>卸载</value></data>
+  <data name="Settings_BuiltInCannotUninstall" xml:space="preserve"><value>内置模型不能卸载</value></data>
+  <data name="Settings_InstallSuccess" xml:space="preserve"><value>模型安装成功</value></data>
+  <data name="Settings_InstallFailed" xml:space="preserve"><value>模型安装失败</value></data>
+  <data name="Settings_ValidateSuccess" xml:space="preserve"><value>内置模型校验通过</value></data>
+  <data name="Settings_ValidateFailed" xml:space="preserve"><value>内置模型校验失败</value></data>
+  <data name="Settings_UninstallSuccess" xml:space="preserve"><value>已卸载自定义模型</value></data>
+  <data name="Settings_Recalibrate" xml:space="preserve"><value>重新检测性能</value></data>
+  <data name="Settings_Recalibrated" xml:space="preserve"><value>已清除性能调优结果，下次识别时重新测量</value></data>
+  <data name="Settings_ClearCache" xml:space="preserve"><value>清除内存缓存</value></data>
+  <data name="Settings_CacheCleared" xml:space="preserve"><value>已清除缩略图与会话推理缓存</value></data>
+  <data name="Settings_NextTaskEffective" xml:space="preserve"><value>加速策略将在下次识别任务生效</value></data>
+  <data name="Settings_ImmediateEffective" xml:space="preserve"><value>设置已即时生效</value></data>
+  <data name="Settings_ThemeFollowSystem" xml:space="preserve"><value>跟随系统</value></data>
+  <data name="Settings_ThemeLight" xml:space="preserve"><value>浅色</value></data>
+  <data name="Settings_ThemeDark" xml:space="preserve"><value>深色</value></data>
+  <data name="Settings_AccelerationAuto" xml:space="preserve"><value>自动</value></data>
+  <data name="Settings_AccelerationPowerSaver" xml:space="preserve"><value>节能优先</value></data>
+  <data name="Settings_AccelerationCpuOnly" xml:space="preserve"><value>仅 CPU</value></data>
+  <data name="Error_ModelPackInvalid" xml:space="preserve"><value>模型包无效，无法加载</value></data>
+  <data name="Error_ModelPackCorrupt" xml:space="preserve"><value>模型文件已损坏，建议重新安装应用</value></data>
+  <data name="Error_ModelIncompatible" xml:space="preserve"><value>模型与当前应用不兼容</value></data>
+  <data name="Error_ImageUnsupported" xml:space="preserve"><value>图片格式不受支持</value></data>
+  <data name="Error_ImageCorrupt" xml:space="preserve"><value>图片已损坏，无法读取</value></data>
+  <data name="Error_InferenceFailed" xml:space="preserve"><value>识别失败，请重试</value></data>
+  <data name="Error_OutOfMemory" xml:space="preserve"><value>内存不足，已停止当前任务</value></data>
+  <data name="Error_ProviderUnavailable" xml:space="preserve"><value>硬件加速不可用，已回退到 CPU</value></data>
+  <data name="Error_SettingsCorrupt" xml:space="preserve"><value>设置已损坏，已恢复默认</value></data>
+  <data name="Error_IoError" xml:space="preserve"><value>文件读写失败</value></data>
+  <data name="Error_Canceled" xml:space="preserve"><value>操作已取消</value></data>
+  <data name="Error_Unknown" xml:space="preserve"><value>发生未知错误</value></data>
+  <data name="Shortcut_OpenImages" xml:space="preserve"><value>打开图片</value></data>
+  <data name="Shortcut_OpenFolder" xml:space="preserve"><value>打开文件夹</value></data>
+  <data name="Shortcut_RecognizeCurrent" xml:space="preserve"><value>识别当前图片</value></data>
+  <data name="Shortcut_RecognizeAll" xml:space="preserve"><value>识别全部图片</value></data>
+  <data name="Shortcut_Cancel" xml:space="preserve"><value>取消当前识别</value></data>
+  <data name="Shortcut_SelectPrevious" xml:space="preserve"><value>选择上一张图片</value></data>
+  <data name="Shortcut_SelectNext" xml:space="preserve"><value>选择下一张图片</value></data>
+  <data name="Shortcut_RemoveCurrent" xml:space="preserve"><value>从列表移除当前图片</value></data>
+  <data name="Shortcut_ToggleRightPane" xml:space="preserve"><value>展开或折叠 Prompt 构建器</value></data>
+  <data name="Shortcut_CopyPrompt" xml:space="preserve"><value>复制当前 Prompt</value></data>
+  <data name="Shortcut_OpenSettings" xml:space="preserve"><value>打开设置</value></data>
+  <data name="Button_OpenImages_ToolTip" xml:space="preserve"><value>打开一张或多张图片 (Ctrl+O)</value></data>
+  <data name="Button_OpenImages_Name" xml:space="preserve"><value>打开图片</value></data>
+  <data name="Button_OpenFolder_ToolTip" xml:space="preserve"><value>打开图片文件夹 (Ctrl+Shift+O)</value></data>
+  <data name="Button_OpenFolder_Name" xml:space="preserve"><value>打开文件夹</value></data>
+  <data name="Button_RecognizeCurrent_ToolTip" xml:space="preserve"><value>识别当前图片 (Ctrl+Enter)</value></data>
+  <data name="Button_RecognizeCurrent_Name" xml:space="preserve"><value>识别当前</value></data>
+  <data name="Button_RecognizeAll_ToolTip" xml:space="preserve"><value>识别所有待处理图片 (Ctrl+Shift+Enter)</value></data>
+  <data name="Button_RecognizeAll_Name" xml:space="preserve"><value>识别全部</value></data>
+  <data name="Button_Cancel_ToolTip" xml:space="preserve"><value>取消当前任务 (Esc)</value></data>
+  <data name="Button_Cancel_Name" xml:space="preserve"><value>取消</value></data>
+  <data name="Button_ToggleRightPane_ToolTip" xml:space="preserve"><value>展开或折叠 Prompt 构建器 (Ctrl+Shift+P)</value></data>
+  <data name="Button_ToggleRightPane_Name" xml:space="preserve"><value>Prompt 栏</value></data>
+  <data name="Button_CopyPrompt_ToolTip" xml:space="preserve"><value>复制当前 Prompt (Ctrl+Alt+C)</value></data>
+  <data name="Button_CopyPrompt_Name" xml:space="preserve"><value>复制 Prompt</value></data>
+  <data name="Button_OpenSettings_ToolTip" xml:space="preserve"><value>打开设置 (Ctrl+,)</value></data>
+  <data name="Button_OpenSettings_Name" xml:space="preserve"><value>设置</value></data>
+  <data name="Button_RemoveCurrent_ToolTip" xml:space="preserve"><value>从列表移除当前图片 (Delete)</value></data>
+  <data name="Button_RemoveCurrent_Name" xml:space="preserve"><value>移除图片</value></data>
+</root>

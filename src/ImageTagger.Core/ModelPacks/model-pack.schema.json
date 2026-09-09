@@ -1,0 +1,576 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://image-tagger.local/schemas/model-pack-v1.json",
+  "title": "ImageTagger Model Pack manifest (schemaVersion 1)",
+  "description": "Version strategy: schemaVersion is a monotonically increasing integer; v1 accepts exactly the ops and parameters listed here. New ops/parameters require a new schemaVersion and an updated validator; unknown versions must be rejected with a clear error.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "displayName",
+    "task",
+    "model",
+    "groups",
+    "input",
+    "preprocessing",
+    "output",
+    "catalog",
+    "defaultThreshold"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "displayName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "task": {
+      "const": "multi-label-image-tagging"
+    },
+    "model": {
+      "$ref": "#/$defs/packFileName"
+    },
+    "groups": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "displayName"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z-]*$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "displayName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "strategy": {
+            "enum": ["threshold", "rating"],
+            "default": "threshold"
+          }
+        }
+      }
+    },
+    "input": {
+      "$ref": "#/$defs/inputContract"
+    },
+    "preprocessing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "steps"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "items": {
+            "$ref": "#/$defs/step"
+          }
+        }
+      }
+    },
+    "output": {
+      "$ref": "#/$defs/outputContract"
+    },
+    "catalog": {
+      "$ref": "#/$defs/packFileName"
+    },
+    "defaultThreshold": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "build": {
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "packFileName": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+      "not": {
+        "pattern": "\\.\\."
+      },
+      "description": "Simple relative file name inside the pack root; no dirs, no traversal."
+    },
+    "background": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 255
+      },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "inputContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "layout",
+        "dtype",
+        "batch",
+        "width",
+        "height"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "layout": {
+          "enum": ["NCHW", "NHWC"]
+        },
+        "dtype": {
+          "const": "float32"
+        },
+        "batch": {
+          "enum": [
+            "dynamic",
+            1
+          ]
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8192
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8192
+        }
+      }
+    },
+    "outputContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "activation",
+        "labelCount"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "activation": {
+          "enum": [
+            "sigmoid",
+            "none"
+          ]
+        },
+        "labelCount": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "op",
+        "version"
+      ],
+      "properties": {
+        "op": {
+          "enum": [
+            "decode",
+            "exif-transpose",
+            "ensure-color",
+            "alpha-composite",
+            "pad-to-square",
+            "resize",
+            "crop",
+            "reorder-channels",
+            "cast",
+            "divide",
+            "normalize",
+            "permute"
+          ]
+        },
+        "version": {
+          "const": 1
+        },
+        "frame": {
+          "const": "first"
+        },
+        "colorManagement": {
+          "const": "ignore"
+        },
+        "mode": {
+          "const": "rgb-or-rgba-if-transparent"
+        },
+        "when": {
+          "const": "has-alpha"
+        },
+        "background": {
+          "$ref": "#/$defs/background"
+        },
+        "anchor": {
+          "enum": [
+            "floor-center",
+            "center"
+          ]
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8192
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8192
+        },
+        "sampler": {
+          "enum": [
+            "pillow-bicubic-v1",
+            "imagesharp-bicubic-v1"
+          ]
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "dtype": {
+          "const": "float32"
+        },
+        "value": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "mean": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "std": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "minItems": 3,
+          "maxItems": 3
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "decode"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "frame",
+              "colorManagement"
+            ],
+            "properties": {
+              "op": {
+                "const": "decode"
+              },
+              "frame": true,
+              "colorManagement": true,
+              "version": true
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "exif-transpose"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "op": {
+                "const": "exif-transpose"
+              },
+              "version": true
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "ensure-color"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "mode"
+            ],
+            "properties": {
+              "op": {
+                "const": "ensure-color"
+              },
+              "mode": true,
+              "version": true
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "alpha-composite"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "when",
+              "background"
+            ],
+            "properties": {
+              "op": {
+                "const": "alpha-composite"
+              },
+              "when": true,
+              "background": true,
+              "version": true
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "pad-to-square"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "anchor",
+              "background"
+            ],
+            "properties": {
+              "op": {
+                "const": "pad-to-square"
+              },
+              "anchor": {
+                "const": "floor-center"
+              },
+              "background": true,
+              "version": true
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "crop"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "width",
+              "height",
+              "anchor"
+            ],
+            "properties": {
+              "op": {
+                "const": "crop"
+              },
+              "width": true,
+              "height": true,
+              "anchor": {
+                "const": "center"
+              },
+              "version": true
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "resize"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "width",
+              "height",
+              "sampler"
+            ],
+            "properties": {
+              "op": {
+                "const": "resize"
+              },
+              "width": true,
+              "height": true,
+              "sampler": true,
+              "version": true
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "reorder-channels"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "order"
+            ],
+            "properties": {
+              "op": {
+                "const": "reorder-channels"
+              },
+              "order": true,
+              "version": true
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "cast"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "dtype"
+            ],
+            "properties": {
+              "op": {
+                "const": "cast"
+              },
+              "dtype": true,
+              "version": true
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "divide"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "value"
+            ],
+            "properties": {
+              "op": {
+                "const": "divide"
+              },
+              "value": true,
+              "version": true
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "normalize"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "mean",
+              "std"
+            ],
+            "properties": {
+              "op": {
+                "const": "normalize"
+              },
+              "mean": true,
+              "std": true,
+              "version": true
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "permute"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "order"
+            ],
+            "properties": {
+              "op": {
+                "const": "permute"
+              },
+              "order": true,
+              "version": true
+            },
+            "additionalProperties": false
+          }
+        }
+      ]
+    }
+  }
+}

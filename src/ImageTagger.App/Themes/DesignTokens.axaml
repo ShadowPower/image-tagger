@@ -1,0 +1,126 @@
+<!--
+  Design tokens for ImageTagger.
+
+  Usage rules:
+  - Spacing: use SpaceXS(4)/SpaceSM(8)/SpaceMD(12)/SpaceLG(16)/SpaceXL(24)
+    (doubles) for Spacing, gaps and font sizes; use the matching Inset*
+    Thickness tokens for Margin/Padding — a Double resource cannot be
+    assigned to Margin/Padding at runtime.
+  - Typography: FontCaption(12)/FontBody(14)/FontSubtitle(16)/FontTitle(20);
+    body weight 400, subtitle 500, title 600.
+  - Radius: RadiusSM(4) on chips/inputs, RadiusMD(8) on cards, RadiusLG(12) on
+    overlays/dialogs.
+  - Borders: 1px BorderThickness with ThemeBorderBrush for dividers and cards.
+  - Semantic colors: Success/Warning/Error/Info brushes only (never raw hex in views);
+    they adapt per theme via ThemeDictionaries below.
+  - Secondary text: SecondaryTextBrush for de-emphasized text and null-safe
+    converter fallbacks (a Brush binding that resolves to null paints NOTHING,
+    so converters must never return null for Foreground/Fill).
+  - Icons: PathIcon at IconSizeSM(16) inline with text, IconSizeMD(20) on toolbars.
+  - Layout constants (SideColumnWidth 286, PromptColumnWidth 360, splitter 8)
+    are pixel-locked by DESIGN.md and intentionally not tokens.
+-->
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <ResourceDictionary.ThemeDictionaries>
+    <ResourceDictionary x:Key="Light">
+      <Color x:Key="SemanticSuccessColor">#16A34A</Color>
+      <Color x:Key="SemanticWarningColor">#D97706</Color>
+      <Color x:Key="SemanticErrorColor">#DC2626</Color>
+      <Color x:Key="SemanticInfoColor">#2563EB</Color>
+      <Color x:Key="SecondaryTextColor">#71717A</Color>
+      <Color x:Key="PanelSurfaceColor">#FFFFFF</Color>
+      <Color x:Key="PanelMutedSurfaceColor">#F7F7F8</Color>
+      <Color x:Key="ThemeBorderColor">#DCDCE1</Color>
+      <Color x:Key="GroupRatingColor">#B45309</Color>
+      <Color x:Key="GroupCharacterColor">#15803D</Color>
+      <Color x:Key="GroupGeneralColor">#1D4ED8</Color>
+      <Color x:Key="GroupArtistColor">#BE185D</Color>
+      <Color x:Key="GroupCopyrightColor">#7E22CE</Color>
+      <SolidColorBrush x:Key="SemanticSuccessBrush" Color="{StaticResource SemanticSuccessColor}" />
+      <SolidColorBrush x:Key="SemanticWarningBrush" Color="{StaticResource SemanticWarningColor}" />
+      <SolidColorBrush x:Key="SemanticErrorBrush" Color="{StaticResource SemanticErrorColor}" />
+      <SolidColorBrush x:Key="SemanticInfoBrush" Color="{StaticResource SemanticInfoColor}" />
+      <SolidColorBrush x:Key="SecondaryTextBrush" Color="{StaticResource SecondaryTextColor}" />
+      <SolidColorBrush x:Key="PanelSurfaceBrush" Color="{StaticResource PanelSurfaceColor}" />
+      <SolidColorBrush x:Key="PanelMutedSurfaceBrush" Color="{StaticResource PanelMutedSurfaceColor}" />
+      <SolidColorBrush x:Key="ThemeBorderBrush" Color="{StaticResource ThemeBorderColor}" />
+      <SolidColorBrush x:Key="GroupRatingBrush" Color="{StaticResource GroupRatingColor}" />
+      <SolidColorBrush x:Key="GroupCharacterBrush" Color="{StaticResource GroupCharacterColor}" />
+      <SolidColorBrush x:Key="GroupGeneralBrush" Color="{StaticResource GroupGeneralColor}" />
+      <SolidColorBrush x:Key="GroupArtistBrush" Color="{StaticResource GroupArtistColor}" />
+      <SolidColorBrush x:Key="GroupCopyrightBrush" Color="{StaticResource GroupCopyrightColor}" />
+    </ResourceDictionary>
+    <ResourceDictionary x:Key="Dark">
+      <Color x:Key="SemanticSuccessColor">#4ADE80</Color>
+      <Color x:Key="SemanticWarningColor">#FBBF24</Color>
+      <Color x:Key="SemanticErrorColor">#F87171</Color>
+      <Color x:Key="SemanticInfoColor">#60A5FA</Color>
+      <Color x:Key="SecondaryTextColor">#A1A1AA</Color>
+      <Color x:Key="PanelSurfaceColor">#17171A</Color>
+      <Color x:Key="PanelMutedSurfaceColor">#222226</Color>
+      <Color x:Key="ThemeBorderColor">#36363D</Color>
+      <Color x:Key="GroupRatingColor">#FBBF24</Color>
+      <Color x:Key="GroupCharacterColor">#4ADE80</Color>
+      <Color x:Key="GroupGeneralColor">#60A5FA</Color>
+      <Color x:Key="GroupArtistColor">#F472B6</Color>
+      <Color x:Key="GroupCopyrightColor">#C084FC</Color>
+      <SolidColorBrush x:Key="SemanticSuccessBrush" Color="{StaticResource SemanticSuccessColor}" />
+      <SolidColorBrush x:Key="SemanticWarningBrush" Color="{StaticResource SemanticWarningColor}" />
+      <SolidColorBrush x:Key="SemanticErrorBrush" Color="{StaticResource SemanticErrorColor}" />
+      <SolidColorBrush x:Key="SemanticInfoBrush" Color="{StaticResource SemanticInfoColor}" />
+      <SolidColorBrush x:Key="SecondaryTextBrush" Color="{StaticResource SecondaryTextColor}" />
+      <SolidColorBrush x:Key="PanelSurfaceBrush" Color="{StaticResource PanelSurfaceColor}" />
+      <SolidColorBrush x:Key="PanelMutedSurfaceBrush" Color="{StaticResource PanelMutedSurfaceColor}" />
+      <SolidColorBrush x:Key="ThemeBorderBrush" Color="{StaticResource ThemeBorderColor}" />
+      <SolidColorBrush x:Key="GroupRatingBrush" Color="{StaticResource GroupRatingColor}" />
+      <SolidColorBrush x:Key="GroupCharacterBrush" Color="{StaticResource GroupCharacterColor}" />
+      <SolidColorBrush x:Key="GroupGeneralBrush" Color="{StaticResource GroupGeneralColor}" />
+      <SolidColorBrush x:Key="GroupArtistBrush" Color="{StaticResource GroupArtistColor}" />
+      <SolidColorBrush x:Key="GroupCopyrightBrush" Color="{StaticResource GroupCopyrightColor}" />
+    </ResourceDictionary>
+  </ResourceDictionary.ThemeDictionaries>
+
+  <!-- Spacing -->
+  <x:Double x:Key="SpaceXS">4</x:Double>
+  <x:Double x:Key="SpaceSM">8</x:Double>
+  <x:Double x:Key="SpaceMD">12</x:Double>
+  <x:Double x:Key="SpaceLG">16</x:Double>
+  <x:Double x:Key="SpaceXL">24</x:Double>
+
+  <!-- Insets: Thickness form of the spacing scale for Margin/Padding
+       (a Double token cannot be assigned to Margin/Padding at runtime) -->
+  <Thickness x:Key="InsetXS">4</Thickness>
+  <Thickness x:Key="InsetSM">8</Thickness>
+  <Thickness x:Key="InsetMD">12</Thickness>
+  <Thickness x:Key="InsetLG">16</Thickness>
+  <Thickness x:Key="InsetXL">24</Thickness>
+
+  <!-- Typography -->
+  <x:Double x:Key="FontCaption">12</x:Double>
+  <x:Double x:Key="FontBody">14</x:Double>
+  <x:Double x:Key="FontSubtitle">16</x:Double>
+  <x:Double x:Key="FontTitle">20</x:Double>
+
+  <!-- Corner radius -->
+  <CornerRadius x:Key="RadiusSM">4</CornerRadius>
+  <CornerRadius x:Key="RadiusMD">8</CornerRadius>
+  <CornerRadius x:Key="RadiusLG">12</CornerRadius>
+
+  <!-- Border -->
+  <Thickness x:Key="BorderThickness1">1</Thickness>
+
+  <!-- Icons -->
+  <x:Double x:Key="IconSizeSM">16</x:Double>
+  <x:Double x:Key="IconSizeMD">20</x:Double>
+
+  <!-- Layout constants: compact defaults within DESIGN.md adjustable ranges
+       (left 240-420, right 320-480). Defaults sit at the lower end to save space. -->
+  <x:Double x:Key="SideColumnWidth">248</x:Double>
+  <x:Double x:Key="SideColumnMinWidth">232</x:Double>
+  <x:Double x:Key="PromptColumnWidth">320</x:Double>
+  <x:Double x:Key="PromptColumnMinWidth">300</x:Double>
+  <x:Double x:Key="ContentColumnMinWidth">300</x:Double>
+  <x:Double x:Key="SplitterWidth">6</x:Double>
+</ResourceDictionary>

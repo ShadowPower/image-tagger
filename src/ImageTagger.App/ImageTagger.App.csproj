@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <SatelliteResourceLanguages>zh-Hans;zh-CN</SatelliteResourceLanguages>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ImageTagger.Core\ImageTagger.Core.csproj" />
+    <ProjectReference Include="..\ImageTagger.Infrastructure\ImageTagger.Infrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Simple" />
+    <PackageReference Include="ShadUI" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <!-- Windows ML native EP/auto-initializer; only used by Windows runtime factory. -->
+    <PackageReference Include="Microsoft.WindowsAppSDK.ML" />
+    <PackageReference Include="Serilog" />
+  </ItemGroup>
+</Project>

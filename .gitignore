@@ -1,0 +1,101 @@
+# ImageTagger repository ignores. Keep source, lock files, golden fixtures and docs.
+
+# .NET build and publish output
+**/[Bb]in/
+**/[Oo]bj/
+**/[Oo]ut/
+/artifacts/
+/publish/
+/dist/
+*.dll
+*.exe
+*.pdb
+*.deps.json
+*.runtimeconfig.json
+*.nupkg
+*.snupkg
+
+# Test, coverage and benchmark output
+**/TestResults/
+**/BenchmarkDotNet.Artifacts/
+*.trx
+*.coverage
+*.coveragexml
+coverage.*
+lcov.info
+/screenshots/
+imagetagger-*-window.png
+imagetagger-*.png
+
+# NuGet working directories (packages.lock.json is intentionally committed)
+**/packages/
+/.nuget/packages/
+
+# IDE and editor state
+/.vs/
+/.vscode/
+/.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.sln.iml
+*.DotSettings.user
+*.csproj.user
+*~
+*.swp
+*.swo
+*.bak
+*.orig
+*.rej
+*.tmp
+*.temp
+
+# Local application state, logs and caches
+**/logs/
+**/cache/
+*.log
+*.user.json
+settings.local.json
+settings.json
+prompt-settings.json
+.SCI/
+
+# Models are distributed separately and selected by directory at runtime.
+/Assets/Models/
+*.onnx
+*.safetensors
+*.itmodel
+*.ckpt
+*.pt
+*.pth
+*.gguf
+
+# Python helper tooling
+**/.venv/
+**/venv/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local agent/tool state
+/.claude/
+/.reasonix/
+/.codex/
+
+# OS metadata
+.DS_Store
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Crash dumps and profiler traces
+*.dmp
+*.dump
+*.etl
+*.trace
+*.speedscope.json

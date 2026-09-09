@@ -1,0 +1,334 @@
+{
+  "top50": [
+    {
+      "id": 0,
+      "name": "general",
+      "group": "rating",
+      "prob": 0.7363229393959045
+    },
+    {
+      "id": 6879,
+      "name": "no_humans",
+      "group": "general",
+      "prob": 0.6850271224975586
+    },
+    {
+      "id": 4137,
+      "name": "gradient_background",
+      "group": "general",
+      "prob": 0.683089017868042
+    },
+    {
+      "id": 2263,
+      "name": "colorful",
+      "group": "general",
+      "prob": 0.6638082265853882
+    },
+    {
+      "id": 6608,
+      "name": "multicolored_background",
+      "group": "general",
+      "prob": 0.6428694128990173
+    },
+    {
+      "id": 8309,
+      "name": "rainbow_gradient",
+      "group": "general",
+      "prob": 0.6070032119750977
+    },
+    {
+      "id": 10245,
+      "name": "text_focus",
+      "group": "general",
+      "prob": 0.5482150912284851
+    },
+    {
+      "id": 7394,
+      "name": "parody",
+      "group": "general",
+      "prob": 0.4974168837070465
+    },
+    {
+      "id": 3,
+      "name": "explicit",
+      "group": "rating",
+      "prob": 0.4653012454509735
+    },
+    {
+      "id": 18,
+      "name": "1girl",
+      "group": "general",
+      "prob": 0.4557465612888336
+    },
+    {
+      "id": 5317,
+      "name": "how_to",
+      "group": "general",
+      "prob": 0.44485586881637573
+    },
+    {
+      "id": 2137,
+      "name": "close-up",
+      "group": "general",
+      "prob": 0.4266774356365204
+    },
+    {
+      "id": 11134,
+      "name": "what",
+      "group": "general",
+      "prob": 0.3735480010509491
+    },
+    {
+      "id": 7737,
+      "name": "pixel_art",
+      "group": "general",
+      "prob": 0.36836177110671997
+    },
+    {
+      "id": 8307,
+      "name": "rainbow_background",
+      "group": "general",
+      "prob": 0.35565054416656494
+    },
+    {
+      "id": 13481,
+      "name": "kaguya_luna",
+      "group": "character",
+      "prob": 0.3499963581562042
+    },
+    {
+      "id": 8311,
+      "name": "rainbow_order",
+      "group": "general",
+      "prob": 0.3238924443721771
+    },
+    {
+      "id": 4186,
+      "name": "green_background",
+      "group": "general",
+      "prob": 0.3235699236392975
+    },
+    {
+      "id": 115,
+      "name": "abstract",
+      "group": "general",
+      "prob": 0.3028341233730316
+    },
+    {
+      "id": 2,
+      "name": "questionable",
+      "group": "rating",
+      "prob": 0.2911352217197418
+    },
+    {
+      "id": 116,
+      "name": "abstract_background",
+      "group": "general",
+      "prob": 0.2807285785675049
+    },
+    {
+      "id": 10079,
+      "name": "symmetry",
+      "group": "general",
+      "prob": 0.27483442425727844
+    },
+    {
+      "id": 9665,
+      "name": "square",
+      "group": "general",
+      "prob": 0.2640101909637451
+    },
+    {
+      "id": 4034,
+      "name": "glowing",
+      "group": "general",
+      "prob": 0.2519272565841675
+    },
+    {
+      "id": 8912,
+      "name": "sequential",
+      "group": "general",
+      "prob": 0.24418936669826508
+    },
+    {
+      "id": 1401,
+      "name": "border",
+      "group": "general",
+      "prob": 0.2228887677192688
+    },
+    {
+      "id": 2267,
+      "name": "column_lineup",
+      "group": "general",
+      "prob": 0.21956567466259003
+    },
+    {
+      "id": 12656,
+      "name": "flandre_scarlet",
+      "group": "character",
+      "prob": 0.21837875247001648
+    },
+    {
+      "id": 10508,
+      "name": "transformation",
+      "group": "general",
+      "prob": 0.21426290273666382
+    },
+    {
+      "id": 1220,
+      "name": "blue_background",
+      "group": "general",
+      "prob": 0.21215461194515228
+    },
+    {
+      "id": 9941,
+      "name": "style_parody",
+      "group": "general",
+      "prob": 0.2084859162569046
+    },
+    {
+      "id": 8130,
+      "name": "purple_background",
+      "group": "general",
+      "prob": 0.20123116672039032
+    },
+    {
+      "id": 9708,
+      "name": "standing",
+      "group": "general",
+      "prob": 0.18471115827560425
+    },
+    {
+      "id": 1,
+      "name": "sensitive",
+      "group": "rating",
+      "prob": 0.1802574098110199
+    },
+    {
+      "id": 8552,
+      "name": "ribbon",
+      "group": "general",
+      "prob": 0.17205321788787842
+    },
+    {
+      "id": 9487,
+      "name": "solo",
+      "group": "general",
+      "prob": 0.1655527651309967
+    },
+    {
+      "id": 1412,
+      "name": "bouncing_breasts",
+      "group": "general",
+      "prob": 0.16515541076660156
+    },
+    {
+      "id": 10653,
+      "name": "two-tone_background",
+      "group": "general",
+      "prob": 0.1526755690574646
+    },
+    {
+      "id": 15094,
+      "name": "remilia_scarlet",
+      "group": "character",
+      "prob": 0.1495877206325531
+    },
+    {
+      "id": 9410,
+      "name": "smile",
+      "group": "general",
+      "prob": 0.14937783777713776
+    },
+    {
+      "id": 6112,
+      "name": "looking_at_viewer",
+      "group": "general",
+      "prob": 0.14777769148349762
+    },
+    {
+      "id": 6425,
+      "name": "mind_control",
+      "group": "general",
+      "prob": 0.1469024419784546
+    },
+    {
+      "id": 9785,
+      "name": "still_life",
+      "group": "general",
+      "prob": 0.1467704027891159
+    },
+    {
+      "id": 10891,
+      "name": "variations",
+      "group": "general",
+      "prob": 0.1464274376630783
+    },
+    {
+      "id": 11756,
+      "name": "alice_margatroid",
+      "group": "character",
+      "prob": 0.1445961892604828
+    },
+    {
+      "id": 1509,
+      "name": "breasts",
+      "group": "general",
+      "prob": 0.1433543860912323
+    },
+    {
+      "id": 9601,
+      "name": "split_screen",
+      "group": "general",
+      "prob": 0.14307396113872528
+    },
+    {
+      "id": 2287,
+      "name": "comparison",
+      "group": "general",
+      "prob": 0.1405344158411026
+    },
+    {
+      "id": 10510,
+      "name": "translucent",
+      "group": "general",
+      "prob": 0.13900922238826752
+    },
+    {
+      "id": 9196,
+      "name": "simple_background",
+      "group": "general",
+      "prob": 0.1372198760509491
+    }
+  ],
+  "threshold": 0.6094,
+  "selectedCount": 5,
+  "selectedIdsSha256": "8b53570420a3aa7b3ecbca2895865f6272b0df757a56d02987b87e1f6107bf7a",
+  "selectedTop10": [
+    {
+      "id": 0,
+      "name": "general",
+      "prob": 0.7363229393959045
+    },
+    {
+      "id": 2263,
+      "name": "colorful",
+      "prob": 0.6638082265853882
+    },
+    {
+      "id": 4137,
+      "name": "gradient_background",
+      "prob": 0.683089017868042
+    },
+    {
+      "id": 6608,
+      "name": "multicolored_background",
+      "prob": 0.6428694128990173
+    },
+    {
+      "id": 6879,
+      "name": "no_humans",
+      "prob": 0.6850271224975586
+    }
+  ]
+}

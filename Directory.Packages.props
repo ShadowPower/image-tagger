@@ -1,0 +1,31 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Avalonia" Version="12.1.0" />
+    <PackageVersion Include="Avalonia.Desktop" Version="12.1.0" />
+    <PackageVersion Include="Avalonia.Headless.XUnit" Version="12.1.1" />
+    <PackageVersion Include="Avalonia.Themes.Simple" Version="12.1.0" />
+    <PackageVersion Include="ShadUI" Version="0.2.4" />
+    <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageVersion Include="CommunityToolkit.HighPerformance" Version="8.4.2" />
+    <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
+    <PackageVersion Include="MetadataExtractor" Version="2.9.3" />
+    <PackageVersion Include="CsvHelper" Version="33.1.0" />
+    <PackageVersion Include="JsonSchema.Net" Version="9.4.0" />
+    <PackageVersion Include="System.Numerics.Tensors" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.11" />
+    <PackageVersion Include="Serilog" Version="4.4.0" />
+    <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
+    <PackageVersion Include="Microsoft.ML.OnnxRuntime" Version="1.29.0" />
+    <PackageVersion Include="Microsoft.WindowsAppSDK.ML" Version="2.1.74" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+    <PackageVersion Include="xunit.v3" Version="3.2.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageVersion Include="coverlet.collector" Version="10.0.1" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <Description>Development-time Model Pack pack/validate tool. Not shipped with the app.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ImageTagger.Core\ImageTagger.Core.csproj" />
+    <ProjectReference Include="..\..\src\ImageTagger.Infrastructure\ImageTagger.Infrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="CsvHelper" />
+    <PackageReference Include="System.Numerics.Tensors" />
+  </ItemGroup>
+</Project>

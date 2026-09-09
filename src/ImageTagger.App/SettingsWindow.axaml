@@ -1,0 +1,187 @@
+﻿<shad:Window xmlns="https://github.com/avaloniaui"
+              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+              xmlns:shad="clr-namespace:ShadUI;assembly=ShadUI"
+              xmlns:vm="clr-namespace:ImageTagger.App.ViewModels"
+              xmlns:controls="clr-namespace:ImageTagger.App.Controls"
+              x:Class="ImageTagger.App.SettingsWindow"
+              x:DataType="vm:SettingsViewModel"
+              Title="设置"
+              Width="640" Height="600"
+              MinWidth="560" MinHeight="520"
+              TitleBarAnimationEnabled="False">
+  <Window.Resources>
+    <controls:ThemePreferenceDisplayConverter x:Key="ThemeDisplayConverter" />
+    <controls:AccelerationPreferenceDisplayConverter x:Key="AccelerationDisplayConverter" />
+    <controls:ScrollGutterConverter x:Key="ScrollGutterConverter" />
+  </Window.Resources>
+  <Window.Styles>
+    <Style Selector="Button">
+      <Setter Property="Transitions">
+        <Transitions>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.12" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button.smallBtn">
+      <Setter Property="Background" Value="{DynamicResource PanelSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="8,4" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="MinHeight" Value="32" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.smallBtn:disabled">
+      <Setter Property="Opacity" Value="0.45" />
+    </Style>
+    <Style Selector="Button.smallBtn:pressed">
+      <Setter Property="Background" Value="{DynamicResource PanelMutedSurfaceBrush}" />
+      <Setter Property="Opacity" Value="0.9" />
+    </Style>
+    <Style Selector="ComboBox">
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="MinHeight" Value="32" />
+    </Style>
+    <Style Selector="TextBox">
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="MinHeight" Value="32" />
+    </Style>
+    <!-- 悬浮滚动条仅在出现时让出右侧间隙，见各 ScrollViewer 的 Padding 绑定（ScrollGutterConverter）；
+         无滚动条时用基础内边距，不预留空白 -->
+    <!-- 与主窗口一致：禁用 ShadUI 按下缩放，只保留透明度反馈 -->
+    <Style Selector="Button:pressed /template/ Panel#RootPanel">
+      <Setter Property="RenderTransform" Value="scale(1, 1)" />
+    </Style>
+  </Window.Styles>
+  <DockPanel LastChildFill="True">
+    <Border DockPanel.Dock="Bottom"
+            BorderBrush="{DynamicResource ThemeBorderBrush}"
+            BorderThickness="0,1,0,0" Padding="10,6">
+      <StackPanel Spacing="2">
+        <TextBlock Text="{Binding StatusMessage}" FontSize="11.5" Opacity="0.8" />
+        <TextBlock Text="{Binding ErrorMessage}" FontSize="11.5"
+                   Foreground="{DynamicResource SemanticErrorBrush}"
+                   IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        <TextBlock Text="正在处理…" FontSize="11.5" Opacity="0.65"
+                   IsVisible="{Binding IsBusy}" />
+      </StackPanel>
+    </Border>
+
+    <!-- 左侧导航 + 右侧内容：导航选中哪项，右侧 Carousel 就显示哪页，各自独立滚动 -->
+    <Grid ColumnDefinitions="132,*" ColumnSpacing="12" Margin="12,12,8,8">
+      <ListBox x:Name="SectionNav" SelectedIndex="0">
+        <ListBoxItem Content="模型" />
+        <ListBoxItem Content="外观" />
+        <ListBoxItem Content="性能" />
+      </ListBox>
+      <!-- PageTransition 置空：设置页打开时内容直接呈现，不要从上往下滑入 -->
+      <Carousel Grid.Column="1" SelectedIndex="{Binding #SectionNav.SelectedIndex}" PageTransition="{x:Null}">
+        <ScrollViewer Classes="settingsScroll" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+          <ScrollViewer.Padding>
+            <MultiBinding Converter="{StaticResource ScrollGutterConverter}" ConverterParameter="0,0,4,4">
+              <Binding Path="Extent" RelativeSource="{RelativeSource Self}" />
+              <Binding Path="Viewport" RelativeSource="{RelativeSource Self}" />
+            </MultiBinding>
+          </ScrollViewer.Padding>
+          <shad:Card Padding="12,10" VerticalAlignment="Top">
+            <StackPanel Spacing="6">
+              <TextBlock Text="模型包目录" FontSize="14" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding ModelPackDisplayName}" FontSize="13" FontWeight="SemiBold" />
+              <TextBox Text="{Binding ModelPackPath}" IsReadOnly="True" PlaceholderText="尚未配置模型包目录" />
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Button Classes="smallBtn" Content="选择目录" Command="{Binding SelectModelPackFolderCommand}" />
+                <Button Classes="smallBtn" Content="清除" Command="{Binding ClearModelPackFolderCommand}" IsEnabled="{Binding ModelPackPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+              </StackPanel>
+            </StackPanel>
+          </shad:Card>
+        </ScrollViewer>
+        <ScrollViewer Classes="settingsScroll" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+          <ScrollViewer.Padding>
+            <MultiBinding Converter="{StaticResource ScrollGutterConverter}" ConverterParameter="0,0,4,4">
+              <Binding Path="Extent" RelativeSource="{RelativeSource Self}" />
+              <Binding Path="Viewport" RelativeSource="{RelativeSource Self}" />
+            </MultiBinding>
+          </ScrollViewer.Padding>
+          <shad:Card Padding="12,10" VerticalAlignment="Top">
+            <StackPanel Spacing="6">
+              <TextBlock Text="外观与行为" FontSize="14" FontWeight="SemiBold" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="主题" FontSize="12" VerticalAlignment="Center" MinWidth="56" Opacity="0.75" />
+                <ComboBox ItemsSource="{Binding AvailableThemes}"
+                          SelectedItem="{Binding Theme}"
+                          MinWidth="140" FontSize="13" MaxDropDownHeight="220">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Converter={StaticResource ThemeDisplayConverter}}" FontSize="13" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                  <ComboBox.SelectionBoxItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Converter={StaticResource ThemeDisplayConverter}}" FontSize="13" />
+                    </DataTemplate>
+                  </ComboBox.SelectionBoxItemTemplate>
+                </ComboBox>
+              </StackPanel>
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <TextBlock Grid.Column="0" Text="打开文件夹时递归扫描" FontSize="12" VerticalAlignment="Center" />
+                <ToggleSwitch Grid.Column="1" IsChecked="{Binding RecursiveFolderScan}" Margin="0,0,4,0" HorizontalAlignment="Right" VerticalAlignment="Center" />
+              </Grid>
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <TextBlock Grid.Column="0" Text="启动时恢复上次窗口布局" FontSize="12" VerticalAlignment="Center" />
+                <ToggleSwitch Grid.Column="1" IsChecked="{Binding RestoreWindowLayout}" Margin="0,0,4,0" HorizontalAlignment="Right" VerticalAlignment="Center" />
+              </Grid>
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <TextBlock Grid.Column="0" Text="显示中文翻译" FontSize="12" VerticalAlignment="Center" />
+                <ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowChineseTranslation}" Margin="0,0,4,0" HorizontalAlignment="Right" VerticalAlignment="Center" />
+              </Grid>
+            </StackPanel>
+          </shad:Card>
+        </ScrollViewer>
+        <ScrollViewer Classes="settingsScroll" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+          <ScrollViewer.Padding>
+            <MultiBinding Converter="{StaticResource ScrollGutterConverter}" ConverterParameter="0,0,4,4">
+              <Binding Path="Extent" RelativeSource="{RelativeSource Self}" />
+              <Binding Path="Viewport" RelativeSource="{RelativeSource Self}" />
+            </MultiBinding>
+          </ScrollViewer.Padding>
+          <shad:Card Padding="12,10" VerticalAlignment="Top">
+            <StackPanel Spacing="6">
+              <TextBlock Text="性能" FontSize="14" FontWeight="SemiBold" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="加速策略" FontSize="12" VerticalAlignment="Center" MinWidth="56" Opacity="0.75" />
+                <ComboBox ItemsSource="{Binding AvailableAccelerations}"
+                          SelectedItem="{Binding Acceleration}"
+                          MinWidth="140" FontSize="13" MaxDropDownHeight="220">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Converter={StaticResource AccelerationDisplayConverter}}" FontSize="13" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                  <ComboBox.SelectionBoxItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Converter={StaticResource AccelerationDisplayConverter}}" FontSize="13" />
+                    </DataTemplate>
+                  </ComboBox.SelectionBoxItemTemplate>
+                </ComboBox>
+              </StackPanel>
+              <TextBlock Text="{Binding AccelerationNote}" FontSize="11" Opacity="0.65"
+                         TextWrapping="Wrap" />
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Button Classes="smallBtn" Content="重新检测性能"
+                        Command="{Binding RecalibrateCommand}"
+                        IsEnabled="{Binding IsBusy, Converter={x:Static BoolConverters.Not}}" />
+              <Button Classes="smallBtn" Content="清除内存缓存"
+                        Command="{Binding ClearMemoryCacheCommand}"
+                        IsEnabled="{Binding IsBusy, Converter={x:Static BoolConverters.Not}}" />
+                <Button Classes="smallBtn" Content="清理本地数据"
+                        Command="{Binding ClearLocalDataCommand}"
+                        IsEnabled="{Binding IsBusy, Converter={x:Static BoolConverters.Not}}" />
+              </StackPanel>
+            </StackPanel>
+          </shad:Card>
+        </ScrollViewer>
+      </Carousel>
+    </Grid>
+  </DockPanel>
+</shad:Window>

@@ -1,0 +1,334 @@
+{
+  "top50": [
+    {
+      "id": 0,
+      "name": "general",
+      "group": "rating",
+      "prob": 0.7854849100112915
+    },
+    {
+      "id": 6608,
+      "name": "multicolored_background",
+      "group": "general",
+      "prob": 0.7378959059715271
+    },
+    {
+      "id": 6879,
+      "name": "no_humans",
+      "group": "general",
+      "prob": 0.6951307654380798
+    },
+    {
+      "id": 4137,
+      "name": "gradient_background",
+      "group": "general",
+      "prob": 0.6937462091445923
+    },
+    {
+      "id": 2263,
+      "name": "colorful",
+      "group": "general",
+      "prob": 0.6494513154029846
+    },
+    {
+      "id": 8309,
+      "name": "rainbow_gradient",
+      "group": "general",
+      "prob": 0.5742700695991516
+    },
+    {
+      "id": 7394,
+      "name": "parody",
+      "group": "general",
+      "prob": 0.5563779473304749
+    },
+    {
+      "id": 10245,
+      "name": "text_focus",
+      "group": "general",
+      "prob": 0.5359950065612793
+    },
+    {
+      "id": 11134,
+      "name": "what",
+      "group": "general",
+      "prob": 0.4869919419288635
+    },
+    {
+      "id": 18,
+      "name": "1girl",
+      "group": "general",
+      "prob": 0.4191732704639435
+    },
+    {
+      "id": 3,
+      "name": "explicit",
+      "group": "rating",
+      "prob": 0.4026090204715729
+    },
+    {
+      "id": 115,
+      "name": "abstract",
+      "group": "general",
+      "prob": 0.40082642436027527
+    },
+    {
+      "id": 13481,
+      "name": "kaguya_luna",
+      "group": "character",
+      "prob": 0.40065741539001465
+    },
+    {
+      "id": 2137,
+      "name": "close-up",
+      "group": "general",
+      "prob": 0.39804720878601074
+    },
+    {
+      "id": 116,
+      "name": "abstract_background",
+      "group": "general",
+      "prob": 0.38804951310157776
+    },
+    {
+      "id": 8311,
+      "name": "rainbow_order",
+      "group": "general",
+      "prob": 0.3870736360549927
+    },
+    {
+      "id": 8307,
+      "name": "rainbow_background",
+      "group": "general",
+      "prob": 0.375947505235672
+    },
+    {
+      "id": 5317,
+      "name": "how_to",
+      "group": "general",
+      "prob": 0.3132167458534241
+    },
+    {
+      "id": 9665,
+      "name": "square",
+      "group": "general",
+      "prob": 0.3117007613182068
+    },
+    {
+      "id": 4186,
+      "name": "green_background",
+      "group": "general",
+      "prob": 0.2974671423435211
+    },
+    {
+      "id": 9941,
+      "name": "style_parody",
+      "group": "general",
+      "prob": 0.2647324800491333
+    },
+    {
+      "id": 7737,
+      "name": "pixel_art",
+      "group": "general",
+      "prob": 0.257135808467865
+    },
+    {
+      "id": 1220,
+      "name": "blue_background",
+      "group": "general",
+      "prob": 0.25586211681365967
+    },
+    {
+      "id": 2,
+      "name": "questionable",
+      "group": "rating",
+      "prob": 0.2526462972164154
+    },
+    {
+      "id": 8130,
+      "name": "purple_background",
+      "group": "general",
+      "prob": 0.24819354712963104
+    },
+    {
+      "id": 10079,
+      "name": "symmetry",
+      "group": "general",
+      "prob": 0.2457563728094101
+    },
+    {
+      "id": 10653,
+      "name": "two-tone_background",
+      "group": "general",
+      "prob": 0.22185030579566956
+    },
+    {
+      "id": 9708,
+      "name": "standing",
+      "group": "general",
+      "prob": 0.20811687409877777
+    },
+    {
+      "id": 9487,
+      "name": "solo",
+      "group": "general",
+      "prob": 0.19156542420387268
+    },
+    {
+      "id": 9785,
+      "name": "still_life",
+      "group": "general",
+      "prob": 0.18822212517261505
+    },
+    {
+      "id": 6350,
+      "name": "meme",
+      "group": "general",
+      "prob": 0.18300841748714447
+    },
+    {
+      "id": 12656,
+      "name": "flandre_scarlet",
+      "group": "character",
+      "prob": 0.1774982213973999
+    },
+    {
+      "id": 9196,
+      "name": "simple_background",
+      "group": "general",
+      "prob": 0.16789209842681885
+    },
+    {
+      "id": 7139,
+      "name": "orange_background",
+      "group": "general",
+      "prob": 0.165765181183815
+    },
+    {
+      "id": 1,
+      "name": "sensitive",
+      "group": "rating",
+      "prob": 0.16352854669094086
+    },
+    {
+      "id": 8552,
+      "name": "ribbon",
+      "group": "general",
+      "prob": 0.1627536565065384
+    },
+    {
+      "id": 9410,
+      "name": "smile",
+      "group": "general",
+      "prob": 0.16215449571609497
+    },
+    {
+      "id": 6112,
+      "name": "looking_at_viewer",
+      "group": "general",
+      "prob": 0.1593599021434784
+    },
+    {
+      "id": 6980,
+      "name": "odd_one_out",
+      "group": "general",
+      "prob": 0.15311776101589203
+    },
+    {
+      "id": 10510,
+      "name": "translucent",
+      "group": "general",
+      "prob": 0.14873374998569489
+    },
+    {
+      "id": 11455,
+      "name": "yellow_background",
+      "group": "general",
+      "prob": 0.14653149247169495
+    },
+    {
+      "id": 10508,
+      "name": "transformation",
+      "group": "general",
+      "prob": 0.14527525007724762
+    },
+    {
+      "id": 5516,
+      "name": "invisible",
+      "group": "general",
+      "prob": 0.1430933177471161
+    },
+    {
+      "id": 2264,
+      "name": "colorful_background",
+      "group": "general",
+      "prob": 0.14302876591682434
+    },
+    {
+      "id": 1509,
+      "name": "breasts",
+      "group": "general",
+      "prob": 0.13993008434772491
+    },
+    {
+      "id": 14945,
+      "name": "platinum_the_trinity",
+      "group": "character",
+      "prob": 0.13635730743408203
+    },
+    {
+      "id": 4034,
+      "name": "glowing",
+      "group": "general",
+      "prob": 0.1346636861562729
+    },
+    {
+      "id": 1412,
+      "name": "bouncing_breasts",
+      "group": "general",
+      "prob": 0.13259769976139069
+    },
+    {
+      "id": 14715,
+      "name": "nishikino_maki",
+      "group": "character",
+      "prob": 0.13132774829864502
+    },
+    {
+      "id": 9186,
+      "name": "silhouette",
+      "group": "general",
+      "prob": 0.13057465851306915
+    }
+  ],
+  "threshold": 0.6094,
+  "selectedCount": 5,
+  "selectedIdsSha256": "8b53570420a3aa7b3ecbca2895865f6272b0df757a56d02987b87e1f6107bf7a",
+  "selectedTop10": [
+    {
+      "id": 0,
+      "name": "general",
+      "prob": 0.7854849100112915
+    },
+    {
+      "id": 2263,
+      "name": "colorful",
+      "prob": 0.6494513154029846
+    },
+    {
+      "id": 4137,
+      "name": "gradient_background",
+      "prob": 0.6937462091445923
+    },
+    {
+      "id": 6608,
+      "name": "multicolored_background",
+      "prob": 0.7378959059715271
+    },
+    {
+      "id": 6879,
+      "name": "no_humans",
+      "prob": 0.6951307654380798
+    }
+  ]
+}

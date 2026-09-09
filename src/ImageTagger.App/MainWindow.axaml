@@ -1,0 +1,829 @@
+﻿<shad:Window xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:shad="clr-namespace:ShadUI;assembly=ShadUI"
+              xmlns:vm="clr-namespace:ImageTagger.App.ViewModels"
+              xmlns:core="clr-namespace:ImageTagger.Core.Domain;assembly=ImageTagger.Core"
+              xmlns:controls="clr-namespace:ImageTagger.App.Controls"
+              x:Class="ImageTagger.App.MainWindow"
+              x:Name="RootWindow"
+             x:DataType="vm:MainViewModel"
+             Title="Image Tagger"
+             Width="1080" Height="680"
+             MinWidth="960" MinHeight="600"
+             ShowBottomBorder="True"
+             Background="{DynamicResource PanelMutedSurfaceBrush}">
+
+  <Window.Resources>
+    <controls:GroupAccentConverter x:Key="GroupAccentConverter" />
+    <controls:ConfidenceBrushConverter x:Key="ConfidenceBrushConverter" />
+    <controls:AnalysisStateBrushConverter x:Key="AnalysisStateBrushConverter" />
+    <controls:ScrollGutterConverter x:Key="ScrollGutterConverter" />
+    <controls:ItemCardBorderConverter x:Key="ItemCardBorderConverter" />
+    <controls:ExclusionDimConverter x:Key="ExclusionDimConverter" />
+    <controls:WindowPhaseBrushConverter x:Key="WindowPhaseBrushConverter" />
+    <controls:BoolOpacityConverter x:Key="BoolOpacityConverter" />
+  </Window.Resources>
+
+  <Window.Styles>
+    <Style Selector="Button">
+      <Setter Property="Transitions">
+        <Transitions>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.12" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Border.itemCard">
+      <Setter Property="Transitions">
+        <Transitions>
+          <BrushTransition Property="Background" Duration="0:0:0.14" />
+          <BrushTransition Property="BorderBrush" Duration="0:0:0.14" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Border.itemCard:pointerover">
+      <Setter Property="Background" Value="{DynamicResource PanelSurfaceBrush}" />
+    </Style>
+    <Style Selector="Button:pointerover"><Setter Property="Opacity" Value="0.92" /></Style>
+    <Style Selector="Button:pressed"><Setter Property="Opacity" Value="0.78" /></Style>
+    <!-- ShadUI 默认按下时内容缩放到 0.97（看起来像字体变小），此处全局禁用，只保留透明度反馈 -->
+    <Style Selector="Button:pressed /template/ Panel#RootPanel">
+      <Setter Property="RenderTransform" Value="scale(1, 1)" />
+    </Style>
+    <!-- 悬浮滚动条仅在出现时让出右侧间隙，见各 ScrollViewer 的 Padding 绑定（ScrollGutterConverter）；
+         无滚动条时用基础内边距，不预留空白 -->
+    <Style Selector="TextBox:focus"><Setter Property="BorderBrush" Value="{DynamicResource SemanticInfoBrush}" /></Style>
+    <Style Selector="TabItem:selected"><Setter Property="FontWeight" Value="SemiBold" /></Style>
+    <!-- 按钮层级：描边次按钮 + 填充主按钮，解决默认主题下按钮形同纯文本的问题 -->
+    <Style Selector="Button.toolbarBtn">
+      <Setter Property="Background" Value="{DynamicResource PanelSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="9,5" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="MinHeight" Value="32" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.toolbarBtn:pointerover">
+      <Setter Property="BorderBrush" Value="{DynamicResource SemanticInfoBrush}" />
+    </Style>
+    <Style Selector="Button.toolbarBtn:pressed">
+      <Setter Property="Background" Value="{DynamicResource PanelMutedSurfaceBrush}" />
+      <Setter Property="Opacity" Value="0.9" />
+    </Style>
+    <!-- 禁用态只降不透明度：ShadUI 原生禁用灰化被上面的自定义背景覆盖，这里显式补回 -->
+    <Style Selector="Button.toolbarBtn:disabled">
+      <Setter Property="Opacity" Value="0.45" />
+    </Style>
+    <Style Selector="Button.smallBtn">
+      <Setter Property="Background" Value="{DynamicResource PanelSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="8,4" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="MinHeight" Value="32" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.smallBtn:pointerover">
+      <Setter Property="BorderBrush" Value="{DynamicResource SemanticInfoBrush}" />
+    </Style>
+    <Style Selector="Button.smallBtn:pressed">
+      <Setter Property="Background" Value="{DynamicResource PanelMutedSurfaceBrush}" />
+      <Setter Property="Opacity" Value="0.9" />
+    </Style>
+    <Style Selector="Button.smallBtn:disabled">
+      <Setter Property="Opacity" Value="0.45" />
+    </Style>
+    <!-- 胶囊标签：填充底 + 描边，悬停高亮边框，被排除时半透明，仍保留位置与可读性 -->
+    <Style Selector="Button.tagCapsule">
+      <Setter Property="Background" Value="{DynamicResource PanelSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="7,3" />
+      <Setter Property="Margin" Value="0,0,4,3" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="MinHeight" Value="26" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.tagCapsule:pointerover">
+      <Setter Property="BorderBrush" Value="{DynamicResource SemanticInfoBrush}" />
+    </Style>
+    <Style Selector="TextBox.compactInput">
+      <Setter Property="Padding" Value="7,4" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="MinHeight" Value="32" />
+    </Style>
+    <Style Selector="ComboBox">
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="MinHeight" Value="32" />
+    </Style>
+  </Window.Styles>
+
+  <shad:Window.LogoContent>
+    <PathIcon Data="{x:Static shad:Icons.Logo}"
+              Width="{StaticResource IconSizeMD}" Height="{StaticResource IconSizeMD}" />
+  </shad:Window.LogoContent>
+
+  <shad:Window.MenuBarContent>
+    <Menu>
+      <MenuItem Header="文件">
+        <MenuItem Header="打开图片…" Command="{Binding OpenImagesCommand}" />
+        <MenuItem Header="打开文件夹…" Command="{Binding OpenFolderCommand}" />
+        <Separator />
+        <MenuItem Header="复制 Prompt" Command="{Binding CopyPromptCommand}" />
+        <MenuItem Header="导出 Prompt…" Command="{Binding ExportPromptCommand}" />
+        <Separator />
+        <MenuItem Header="设置…" Command="{Binding OpenSettingsCommand}" />
+      </MenuItem>
+      <MenuItem Header="视图">
+        <MenuItem Header="跟随系统" Command="{Binding SetThemeCommand}" CommandParameter="0" />
+        <MenuItem Header="浅色" Command="{Binding SetThemeCommand}" CommandParameter="1" />
+        <MenuItem Header="深色" Command="{Binding SetThemeCommand}" CommandParameter="2" />
+      </MenuItem>
+    </Menu>
+  </shad:Window.MenuBarContent>
+
+  <!-- ShadUI 浮层宿主：Toast（复制/导出/跳过/非阻断错误）与确认 Dialog 共用主窗口覆盖层 -->
+  <shad:Window.Hosts>
+    <shad:DialogHost Manager="{Binding DialogManager}" />
+    <shad:ToastHost Manager="{Binding ToastManager}" MaxToasts="5" />
+  </shad:Window.Hosts>
+
+  <Grid RowDefinitions="Auto,*,Auto">
+
+    <Border Grid.Row="0" BorderBrush="{DynamicResource ThemeBorderBrush}"
+            BorderThickness="0,0,0,1" Padding="10,4">
+      <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto"
+            ColumnSpacing="6">
+        <Button Grid.Column="0" Classes="toolbarBtn" Content="打开图片" Command="{Binding OpenImagesCommand}"
+                VerticalAlignment="Center"
+                ToolTip.Tip="打开一张或多张图片 (Ctrl+O)"
+                AutomationProperties.Name="打开图片" />
+        <Button Grid.Column="1" Classes="toolbarBtn" Content="打开文件夹" Command="{Binding OpenFolderCommand}"
+                VerticalAlignment="Center"
+                ToolTip.Tip="打开图片文件夹，包括子目录可在设置中开启 (Ctrl+Shift+O)"
+                AutomationProperties.Name="打开文件夹" />
+        <Button Grid.Column="2" Classes="toolbarBtn" Content="清空列表" Command="{Binding ClearImagesCommand}"
+                VerticalAlignment="Center"
+                ToolTip.Tip="移除当前会话中的全部图片" AutomationProperties.Name="清空图片列表" />
+        <Separator Grid.Column="3" Height="16" VerticalAlignment="Center" />
+        <Button Grid.Column="4" Classes="toolbarBtn" Command="{Binding RecognizeCurrentCommand}"
+                VerticalAlignment="Center" ToolTip.Tip="识别当前图片 (Ctrl+Enter)"
+                AutomationProperties.Name="识别当前图片">
+          <StackPanel Orientation="Horizontal" Spacing="5">
+            <PathIcon Data="{x:Static shad:Icons.Search}" Width="12" Height="12" VerticalAlignment="Center" />
+            <TextBlock Text="识别当前" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="5" Classes="toolbarBtn" Command="{Binding RecognizeAllCommand}"
+                VerticalAlignment="Center"
+                ToolTip.Tip="识别所有待处理图片 (Ctrl+Shift+Enter)"
+                AutomationProperties.Name="识别全部图片">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <PathIcon Data="{x:Static shad:Icons.Success}" Width="12" Height="12" VerticalAlignment="Center" />
+            <TextBlock Text="识别全部" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="6" Classes="toolbarBtn" Command="{Binding CancelCommand}"
+                VerticalAlignment="Center"
+                IsVisible="{Binding IsOperationRunning}" ToolTip.Tip="取消当前任务 (Esc)"
+                AutomationProperties.Name="取消识别">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <PathIcon Data="{x:Static shad:Icons.Cross}" Width="12" Height="12" VerticalAlignment="Center" />
+            <TextBlock Text="取消" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <shad:Badge Grid.Column="7" Variant="Secondary"
+                HorizontalAlignment="Left" VerticalAlignment="Center">
+          <TextBlock VerticalAlignment="Center" LineHeight="16" FontSize="11.5">
+            <Run Text="{Binding CurrentModelName}" FontWeight="Medium" />
+          </TextBlock>
+        </shad:Badge>
+        <Button Grid.Column="9" Classes="toolbarBtn" Command="{Binding ToggleRightPaneCommand}"
+                ToolTip.Tip="展开或折叠 Prompt 构建器 (Ctrl+Shift+P)"
+                AutomationProperties.Name="切换 Prompt 构建器">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <PathIcon Data="{x:Static shad:Icons.SidePanel}" Width="12" Height="12" VerticalAlignment="Center" />
+            <TextBlock Text="Prompt 栏" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="10" Classes="toolbarBtn" Command="{Binding OpenSettingsCommand}"
+                ToolTip.Tip="打开设置 (Ctrl+,)"
+                AutomationProperties.Name="打开设置">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <PathIcon Data="{x:Static shad:Icons.Settings}" Width="12" Height="12" VerticalAlignment="Center" />
+            <TextBlock Text="设置" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="11" Classes="toolbarBtn" Content="状态预览" Command="{Binding CyclePhaseCommand}"
+                HorizontalAlignment="Right" IsVisible="{Binding IsDesignMode}" />
+      </Grid>
+    </Border>
+
+    <!-- Three columns: file list | workspace tabs | prompt.
+         宽度挂在列定义上（而非内容 Border），分隔条才能真正拖动；
+         右栏折叠由 code-behind 保存/恢复列宽（绑定会被拖拽覆盖）。 -->
+    <Grid Grid.Row="1" x:Name="WorkspaceGrid" Margin="0"
+          Background="{DynamicResource PanelSurfaceBrush}">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="248" MinWidth="232" MaxWidth="360" />
+        <ColumnDefinition Width="6" />
+        <ColumnDefinition Width="*" MinWidth="300" />
+        <ColumnDefinition Width="6" />
+        <ColumnDefinition Width="320" MinWidth="0" MaxWidth="420" />
+      </Grid.ColumnDefinitions>
+
+      <!-- Left: file session list -->
+      <Border Grid.Column="0"
+              BorderBrush="{DynamicResource ThemeBorderBrush}"
+              BorderThickness="0,0,1,0">
+        <Grid RowDefinitions="Auto,*">
+          <Grid Grid.Row="0" RowDefinitions="Auto,Auto" Margin="8,6,8,4">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="图片" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <shad:Badge Grid.Column="1" Variant="Secondary" VerticalAlignment="Center">
+                <TextBlock FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" LineHeight="16">
+                  <Run Text="{Binding ImageCount}" /><Run Text=" 张" />
+                </TextBlock>
+              </shad:Badge>
+            </Grid>
+            <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="4" Margin="0,5,0,0">
+              <TextBox FontSize="13" MinHeight="32" PlaceholderText="搜索文件名…"
+                       Text="{Binding ImageSearchText, Mode=TwoWay}" />
+              <ComboBox x:Name="StatusFilter" Grid.Column="1" ItemsSource="{Binding ImageStatusFilters}"
+                        SelectedItem="{Binding ImageStatusFilter, Mode=TwoWay}" MinWidth="76" />
+            </Grid>
+          </Grid>
+          <ListBox Grid.Row="1" ItemsSource="{Binding FilteredImages}"
+                   SelectedItem="{Binding SelectedImage}"
+                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                   Margin="4,0,4,4" Padding="0">
+            <ListBox.Styles>
+              <!-- 列表项收紧：去掉主题默认内边距与右侧选中对勾；
+                   选中用加粗描边表示，不覆盖完成态的绿色边框 -->
+              <Style Selector="ListBoxItem">
+                <Setter Property="Padding" Value="2,1" />
+                <Setter Property="Margin" Value="0" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+              </Style>
+              <Style Selector="ListBoxItem:selected /template/ PathIcon#CheckSelected">
+                <Setter Property="IsVisible" Value="False" />
+              </Style>
+              <!-- 选中项用高亮底表示，不碰描边粗细（避免布局跳动）与状态边框色 -->
+              <Style Selector="ListBoxItem:selected Border.itemCard">
+                <Setter Property="Background" Value="{DynamicResource PanelSurfaceBrush}" />
+              </Style>
+            </ListBox.Styles>
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:ImageListItemViewModel">
+                <Border Classes="itemCard" Margin="0,0,0,4" Padding="6" CornerRadius="{StaticResource RadiusMD}"
+                        HorizontalAlignment="Stretch"
+                        Background="{DynamicResource PanelMutedSurfaceBrush}"
+                        BorderBrush="{Binding AnalysisState, Converter={StaticResource ItemCardBorderConverter}}"
+                        BorderThickness="{StaticResource BorderThickness1}"
+                        ToolTip.Tip="{Binding CanonicalPath}"
+                        DoubleTapped="OnImageItemDoubleTapped">
+                  <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                    <Grid.ContextFlyout>
+                      <MenuFlyout>
+                        <MenuItem Header="识别/重新识别" Click="OnRecognizeItemClick" />
+                        <MenuItem Header="复制文件路径" Click="OnCopyPathClick" />
+                        <MenuItem Header="在文件管理器中显示" Click="OnRevealItemClick" />
+                        <Separator />
+                        <MenuItem Header="从列表移除" Click="OnRemoveItemClick" />
+                      </MenuFlyout>
+                    </Grid.ContextFlyout>
+                    <Border Grid.Column="0" Width="48" Height="48"
+                            CornerRadius="{StaticResource RadiusSM}"
+                            BorderBrush="{DynamicResource ThemeBorderBrush}"
+                            BorderThickness="{StaticResource BorderThickness1}"
+                            ClipToBounds="True">
+                      <controls:ThumbnailView Item="{Binding}" />
+                    </Border>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                      <TextBlock Text="{Binding FileName}" FontSize="13"
+                                 FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+                      <TextBlock FontSize="11" Opacity="0.6"
+                                 TextTrimming="CharacterEllipsis">
+                        <Run Text="{Binding DimensionsText}" /><Run Text=" / " /><Run Text="{Binding FileSizeText}" /><Run Text=" / " /><Run Text="{Binding Format}" />
+                      </TextBlock>
+                      <StackPanel Orientation="Horizontal" Spacing="5">
+                        <Ellipse Width="6" Height="6" VerticalAlignment="Center"
+                                 Fill="{Binding AnalysisState, Converter={StaticResource AnalysisStateBrushConverter}}" />
+                        <TextBlock Text="{Binding StatusText}" FontSize="11"
+                                   Foreground="{Binding AnalysisState, Converter={StaticResource AnalysisStateBrushConverter}}" />
+                      </StackPanel>
+                    </StackPanel>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+      </Border>
+
+      <GridSplitter Grid.Column="1"
+                    Background="Transparent"
+                    ResizeBehavior="PreviousAndNext" ResizeDirection="Columns" />
+
+      <!-- Center: workspace tabs; no large image preview by design -->
+      <Border Grid.Column="2" x:Name="CenterPaneBorder" MinWidth="{StaticResource ContentColumnMinWidth}"
+              Background="{DynamicResource PanelSurfaceBrush}">
+        <DockPanel>
+          <Border DockPanel.Dock="Top" Height="34" Padding="10,0"
+                  BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <TextBlock Grid.Column="0" Text="{Binding CurrentFileName}" VerticalAlignment="Center"
+                         FontSize="13" LineHeight="18" FontWeight="Medium" TextTrimming="CharacterEllipsis"
+                         ToolTip.Tip="{Binding SelectedImage.CanonicalPath}" />
+              <TextBlock Grid.Column="1" Text="{Binding CurrentFileDetails}" VerticalAlignment="Center"
+                         FontSize="11" LineHeight="16" Opacity="0.65" FontFamily="Consolas,Menlo,monospace"
+                         TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding CurrentFileDetails}" />
+            </Grid>
+          </Border>
+          <Grid>
+            <!-- Succeeded: two tabs share the workspace; no search box, no large preview -->
+            <TabControl IsVisible="{Binding IsSucceeded}" Margin="8">
+              <TabItem Header="识别标签">
+                <ScrollViewer Classes="centerScroll" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                  <ScrollViewer.Padding>
+                    <MultiBinding Converter="{StaticResource ScrollGutterConverter}" ConverterParameter="2">
+                      <Binding Path="Extent" RelativeSource="{RelativeSource Self}" />
+                      <Binding Path="Viewport" RelativeSource="{RelativeSource Self}" />
+                    </MultiBinding>
+                  </ScrollViewer.Padding>
+                          <StackPanel Spacing="5">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <Button Classes="smallBtn" Content="全选可见标签" Command="{Binding SelectAllVisibleTagsCommand}"
+                              ToolTip.Tip="清除手动排除，使阈值以上标签全部进入 Prompt"
+                              AutomationProperties.Name="全选可见标签" />
+                      <Button Classes="smallBtn" Content="清除手动选择" Command="{Binding ClearTagOverridesCommand}"
+                              ToolTip.Tip="清除全部手动覆盖，恢复阈值与规则的自动选择"
+                              AutomationProperties.Name="清除手动选择" />
+                      <Button Classes="smallBtn" Content="复制可见标签" Command="{Binding CopyVisibleTagsCommand}"
+                              ToolTip.Tip="复制当前阈值下未排除的标签" AutomationProperties.Name="复制可见标签" />
+                    </StackPanel>
+                    <shad:Card IsVisible="{Binding Tags.IsUnrecognized}" Margin="0,8,0,0" Padding="10,8">
+                      <StackPanel Spacing="5">
+                        <TextBlock Text="尚未识别此图片" FontSize="14" FontWeight="SemiBold" />
+                        <TextBlock Text="点击下方按钮开始识别，结果将按分级、角色、通用分组展示"
+                                   FontSize="11.5" Opacity="0.65" />
+                        <Button Classes="smallBtn" Content="识别当前图片" Command="{Binding RecognizeCurrentCommand}" HorizontalAlignment="Left" />
+                      </StackPanel>
+                    </shad:Card>
+                    <shad:Card IsVisible="{Binding SelectedImage.Document.LastError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                      <StackPanel Spacing="6">
+                        <TextBlock Text="识别失败" FontSize="14" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding SelectedImage.Document.LastError}" FontSize="11.5" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource SemanticErrorBrush}" />
+                        <Button Classes="smallBtn" Content="重试识别" Command="{Binding RecognizeCurrentCommand}" HorizontalAlignment="Left" />
+                      </StackPanel>
+                    </shad:Card>
+                    <ItemsControl ItemsSource="{Binding Tags.Groups}" IsVisible="{Binding Tags.HasResult}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:TagGroupViewModel">
+                          <StackPanel Spacing="4" Margin="0,2,0,12">
+                              <StackPanel Orientation="Horizontal" Spacing="7">
+                                <Border Width="3" Height="13" CornerRadius="2" VerticalAlignment="Center"
+                                        Background="{Binding GroupId, Converter={StaticResource GroupAccentConverter}}" />
+                                <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold"
+                                           FontSize="13" LineHeight="18" VerticalAlignment="Center"
+                                           Foreground="{Binding GroupId, Converter={StaticResource GroupAccentConverter}}" />
+                                <shad:Badge Variant="Secondary" VerticalAlignment="Center">
+                                  <TextBlock Text="{Binding Count}" FontSize="11" LineHeight="16"
+                                             FontWeight="SemiBold" VerticalAlignment="Center" />
+                                </shad:Badge>
+                              </StackPanel>
+                              <TextBlock Text="当前阈值下无标签" FontSize="11.5"
+                                         Opacity="0.5" IsVisible="{Binding IsEmpty}" />
+                              <ItemsControl ItemsSource="{Binding VisibleTags}">
+                                <ItemsControl.ItemsPanel>
+                                  <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal" />
+                                  </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                  <DataTemplate x:DataType="vm:TagItemViewModel">
+                                    <Button Classes="tagCapsule"
+                                            Opacity="{Binding IsExcluded, Converter={StaticResource ExclusionDimConverter}}"
+                                            Click="OnToggleTagClick"
+                                            ToolTip.Tip="点击切换是否进入 Prompt（取消勾选只影响 Prompt，不删除识别结果）"
+                                            AutomationProperties.Name="切换标签">
+                                      <!-- 单 TextBlock 多 Run：同一基线，天然水平对齐 -->
+                                      <TextBlock VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
+                                        <Run Text="{Binding OriginalName}" FontSize="12" FontWeight="SemiBold" />
+                                        <Run Text="{Binding TranslationText}" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" />
+                                        <Run Text="{Binding ConfidenceDisplay}" FontSize="11" FontWeight="SemiBold"
+                                             FontFamily="Consolas,Menlo,monospace" Foreground="{Binding Probability, Converter={StaticResource ConfidenceBrushConverter}}" />
+                                      </TextBlock>
+                                    </Button>
+                                  </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                          </StackPanel>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </ScrollViewer>
+              </TabItem>
+              <TabItem Header="预览">
+                <Grid RowDefinitions="*,Auto" Margin="8">
+                  <controls:PreviewView Item="{Binding SelectedImage}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+                  <TextBlock Grid.Row="1" HorizontalAlignment="Center" FontSize="11.5" Opacity="0.65" Margin="0,8,0,0">
+                    <Run Text="{Binding SelectedImage.DimensionsText}" /><Run Text="  /  " />
+                    <Run Text="{Binding SelectedImage.Format}" /><Run Text="  /  " />
+                    <Run Text="{Binding SelectedImage.FileSizeText}" />
+                  </TextBlock>
+                </Grid>
+              </TabItem>
+              <TabItem Header="生成信息">
+                <ScrollViewer Classes="centerScroll" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                  <ScrollViewer.Padding>
+                    <MultiBinding Converter="{StaticResource ScrollGutterConverter}" ConverterParameter="2">
+                      <Binding Path="Extent" RelativeSource="{RelativeSource Self}" />
+                      <Binding Path="Viewport" RelativeSource="{RelativeSource Self}" />
+                    </MultiBinding>
+                  </ScrollViewer.Padding>
+                  <StackPanel Spacing="6">
+                    <shad:Badge Variant="Outline" HorizontalAlignment="Left">
+                      <TextBlock FontSize="11.5" Opacity="0.85">
+                        <Run Text="来源 " /><Run Text="{Binding Metadata.SourceBadge}" />
+                      </TextBlock>
+                    </shad:Badge>
+                    <TextBlock Text="未发现支持的 AI 生成信息" FontSize="11.5"
+                               Opacity="0.7" IsVisible="{Binding !Metadata.IsParsed}" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                      <TextBlock Grid.Column="0" Text="正向提示词" FontSize="12" FontWeight="Medium" VerticalAlignment="Center" />
+                      <Button Grid.Column="1" Classes="smallBtn" Content="复制" Command="{Binding CopyPositivePromptCommand}" />
+                    </Grid>
+                    <TextBox Classes="compactInput" Text="{Binding Metadata.Positive}" IsReadOnly="True"
+                             AcceptsReturn="True" TextWrapping="Wrap" MinHeight="52" FontSize="12" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                      <TextBlock Grid.Column="0" Text="负向提示词" FontSize="12" FontWeight="Medium" VerticalAlignment="Center" />
+                      <Button Grid.Column="1" Classes="smallBtn" Content="复制" Command="{Binding CopyNegativePromptCommand}" />
+                    </Grid>
+                    <TextBox Classes="compactInput" Text="{Binding Metadata.Negative}" IsReadOnly="True"
+                             AcceptsReturn="True" TextWrapping="Wrap" MinHeight="36" FontSize="12" />
+                    <TextBlock Text="参数" FontSize="12" FontWeight="Medium" />
+                    <ItemsControl ItemsSource="{Binding Metadata.ParameterRows}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ParameterRow">
+                          <Grid ColumnDefinitions="120,*" ColumnSpacing="8">
+                            <TextBlock Grid.Column="0" Text="{Binding Key}" FontSize="11.5" Opacity="0.65" TextWrapping="Wrap" />
+                            <TextBlock Grid.Column="1" Text="{Binding Value}" FontSize="11.5" TextWrapping="Wrap" />
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="模型资源" FontSize="12" FontWeight="Medium" />
+                    <ItemsControl ItemsSource="{Binding Metadata.Resources}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="core:GenerationResource">
+                          <TextBlock FontSize="11.5" TextWrapping="Wrap">
+                            <Run Text="{Binding Kind}" /><Run Text=" " /><Run Text="{Binding Name}" />
+                          </TextBlock>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="解析警告" FontSize="12" FontWeight="Medium"
+                               IsVisible="{Binding Metadata.HasPartialWarning}" />
+                    <ItemsControl ItemsSource="{Binding Metadata.Warnings}"
+                                  IsVisible="{Binding Metadata.HasPartialWarning}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                          <TextBlock Text="{Binding}" FontSize="11.5" TextWrapping="Wrap" />
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Expander Header="原始元数据" FontSize="12">
+                      <TextBox Text="{Binding Metadata.RawText}" IsReadOnly="True"
+                               AcceptsReturn="True" TextWrapping="Wrap" MinHeight="52"
+                               FontSize="11.5" FontFamily="Consolas,Menlo,monospace" />
+                    </Expander>
+                  </StackPanel>
+                </ScrollViewer>
+              </TabItem>
+            </TabControl>
+            <!-- Empty -->
+            <StackPanel IsVisible="{Binding IsEmpty}" HorizontalAlignment="Center"
+                        VerticalAlignment="Center" Spacing="8">
+              <PathIcon Data="{x:Static shad:Icons.ArrowDown}" Width="28" Height="28"
+                        HorizontalAlignment="Center" Opacity="0.6" />
+              <TextBlock Text="导入图片开始" FontSize="14" FontWeight="SemiBold"
+                         HorizontalAlignment="Center" />
+              <TextBlock Text="支持 PNG / JPEG / WebP，可多选或拖入文件夹"
+                         FontSize="11.5"
+                         HorizontalAlignment="Center" Opacity="0.65" />
+            </StackPanel>
+            <!-- Busy -->
+            <StackPanel IsVisible="{Binding IsBusy}" Spacing="8" Margin="16"
+                        VerticalAlignment="Center" HorizontalAlignment="Center" Width="280">
+              <ProgressBar IsIndeterminate="True" Width="180" HorizontalAlignment="Center" />
+              <TextBlock Text="正在分析图片…" FontSize="12" Opacity="0.75"
+                         HorizontalAlignment="Center" />
+              <shad:Skeleton Height="14" />
+              <shad:Skeleton Height="14" />
+              <shad:Skeleton Height="14" Width="180" HorizontalAlignment="Left" />
+            </StackPanel>
+            <!-- Error -->
+            <StackPanel IsVisible="{Binding IsError}" HorizontalAlignment="Center"
+                        VerticalAlignment="Center" Spacing="8">
+              <PathIcon Data="{x:Static shad:Icons.Error}" Width="28" Height="28"
+                        HorizontalAlignment="Center"
+                        Foreground="{DynamicResource SemanticErrorBrush}" />
+              <TextBlock Text="分析失败" FontSize="14" FontWeight="SemiBold"
+                         HorizontalAlignment="Center" />
+              <TextBlock Text="查看状态栏错误信息后重试" FontSize="11.5"
+                         HorizontalAlignment="Center" Opacity="0.65" />
+              <Button Classes="smallBtn" Content="重试" HorizontalAlignment="Center" Command="{Binding RecognizeCurrentCommand}" />
+            </StackPanel>
+          </Grid>
+        </DockPanel>
+      </Border>
+
+      <GridSplitter Grid.Column="3"
+                    Background="Transparent"
+                    IsVisible="{Binding IsRightPaneExpanded}"
+                    ResizeBehavior="PreviousAndNext" ResizeDirection="Columns" />
+
+      <!-- Right: prompt area -->
+      <Border Grid.Column="4"
+              IsVisible="{Binding IsRightPaneExpanded}"
+              BorderBrush="{DynamicResource ThemeBorderBrush}"
+              BorderThickness="1,0,0,0">
+        <Grid RowDefinitions="Auto,*,Auto,Auto" Margin="8,4,8,8"
+              RowSpacing="4">
+          <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBlock Grid.Column="0" Text="Prompt 构建器" FontSize="14"
+                       FontWeight="SemiBold" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Classes="smallBtn" Content="恢复默认" Command="{Binding Rules.ResetDefaultsCommand}"
+                    ToolTip.Tip="回到内置的 Danbooru 默认规则（只重置 Prompt 规则）" />
+          </Grid>
+              <ScrollViewer Grid.Row="1" Classes="rightPaneScroll"
+                        ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ScrollViewer.Padding>
+                <MultiBinding Converter="{StaticResource ScrollGutterConverter}" ConverterParameter="1,1,1,-2">
+                <Binding Path="Extent" RelativeSource="{RelativeSource Self}" />
+                <Binding Path="Viewport" RelativeSource="{RelativeSource Self}" />
+              </MultiBinding>
+            </ScrollViewer.Padding>
+            <StackPanel Spacing="6">
+              <shad:Card Padding="6,5">
+                <StackPanel Spacing="4">
+                  <TextBlock Text="分组开关与顺序" FontSize="13" FontWeight="SemiBold" Opacity="0.82" />
+              <ItemsControl ItemsSource="{Binding Rules.Groups}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <StackPanel Orientation="Vertical" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:GroupRuleRow">
+                    <Border Margin="0,0,0,6" Padding="7,4" CornerRadius="{StaticResource RadiusMD}"
+                            HorizontalAlignment="Stretch"
+                            Background="{DynamicResource PanelSurfaceBrush}"
+                            BorderBrush="{DynamicResource ThemeBorderBrush}"
+                            BorderThickness="{StaticResource BorderThickness1}">
+                      <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="4">
+                        <CheckBox Grid.Column="0" Content="{Binding DisplayName}" FontSize="13" VerticalAlignment="Center"
+                                  IsChecked="{Binding Enabled}"
+                                  ToolTip.Tip="启用或停用该分组" />
+                        <Button Grid.Column="1" Classes="smallBtn" Content="上移" Padding="5,2"
+                                Command="{Binding $parent[Window].DataContext.Rules.MoveGroupUpCommand}" CommandParameter="{Binding GroupId}"
+                                ToolTip.Tip="上移分组" AutomationProperties.Name="上移分组" />
+                        <Button Grid.Column="2" Classes="smallBtn" Content="下移" Padding="5,2"
+                                Command="{Binding $parent[Window].DataContext.Rules.MoveGroupDownCommand}" CommandParameter="{Binding GroupId}"
+                                ToolTip.Tip="下移分组" AutomationProperties.Name="下移分组" />
+                        <Button Grid.Column="3" Classes="smallBtn" HorizontalAlignment="Right"
+                                Content="{Binding SortModeDescription}"
+                                Padding="7,3" MinWidth="92"
+                                Click="OnCycleSortClick" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+                </StackPanel>
+              </shad:Card>
+              <shad:Card Padding="6,5">
+                <StackPanel Spacing="4">
+                  <TextBlock Text="标签处理" FontSize="13" FontWeight="SemiBold" Opacity="0.75" />
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <TextBlock Grid.Column="0" Text="下划线转空格" FontSize="13" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" />
+                    <ToggleSwitch Grid.Column="1" IsChecked="{Binding Rules.UnderscoreToSpace}"
+                                  Margin="0,0,4,0" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                  </Grid>
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <TextBlock Grid.Column="0" Text="转义括号（( → \(，默认开启）" FontSize="13" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" />
+                    <ToggleSwitch Grid.Column="1" IsChecked="{Binding Rules.EscapeParentheses}"
+                                  Margin="0,0,4,0" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                  </Grid>
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"
+                        IsVisible="False">
+                    <TextBlock Grid.Column="0" Text="概率权重" FontSize="13" VerticalAlignment="Center"
+                               ToolTip.Tip="将置信度映射为 (tag:weight)" />
+                    <ToggleSwitch Grid.Column="1" IsChecked="{Binding Rules.ProbabilityWeights}"
+                                  Margin="0,0,4,0" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                  </Grid>
+                  <Grid ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="6"
+                        IsVisible="{Binding Rules.ProbabilityWeights}">
+                    <TextBlock Grid.Column="0" Text="最小" FontSize="13" VerticalAlignment="Center" Opacity="0.65" />
+                    <TextBox Grid.Column="1" Classes="compactInput" Text="{Binding Rules.MinWeight}"
+                             shad:TextBoxAssist.Clearable="True" />
+                    <TextBlock Grid.Column="2" Text="最大" FontSize="13" VerticalAlignment="Center" Opacity="0.65" />
+                    <TextBox Grid.Column="3" Classes="compactInput" Text="{Binding Rules.MaxWeight}"
+                             shad:TextBoxAssist.Clearable="True" />
+                  </Grid>
+                  <TextBlock IsVisible="False" Text="排除列表" FontSize="13" FontWeight="SemiBold" Opacity="0.75" />
+              <Grid IsVisible="False" ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                <TextBox Grid.Column="0" Classes="compactInput" Text="{Binding NewExcludedTag}" PlaceholderText="输入原始标签"
+                         shad:TextBoxAssist.Clearable="True" />
+                <Button Grid.Column="1" Classes="smallBtn" Content="添加" Command="{Binding AddExcludedTagCommand}" />
+              </Grid>
+              <ItemsControl IsVisible="False" ItemsSource="{Binding Rules.ExcludedTags}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="x:String">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                      <TextBlock Grid.Column="0" Text="{Binding}" FontSize="13" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                      <Button Grid.Column="1" Classes="smallBtn" Content="移除" Padding="5,1"
+                              Click="OnRemoveExcludedTagClick" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+                </StackPanel>
+              </shad:Card>
+              <shad:Card IsVisible="False" Padding="8,6">
+                <StackPanel Spacing="6">
+                  <TextBlock Text="替换规则" FontSize="13" FontWeight="SemiBold" Opacity="0.75" />
+              <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="6">
+                <TextBox Grid.Column="0" Classes="compactInput" Text="{Binding NewReplacementFrom}" PlaceholderText="原始标签"
+                         shad:TextBoxAssist.Clearable="True" />
+                <TextBox Grid.Column="1" Classes="compactInput" Text="{Binding NewReplacementTo}" PlaceholderText="输出文本"
+                         shad:TextBoxAssist.Clearable="True" />
+                <Button Grid.Column="2" Classes="smallBtn" Content="添加" Command="{Binding AddReplacementCommand}" />
+              </Grid>
+              <ItemsControl ItemsSource="{Binding Rules.Replacements}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                      <TextBlock Grid.Column="0" FontSize="13" VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
+                        <Run Text="{Binding Key}" /><Run Text=" → " /><Run Text="{Binding Value}" />
+                      </TextBlock>
+                      <Button Grid.Column="1" Classes="smallBtn" Content="移除" Padding="5,1"
+                              Click="OnRemoveReplacementClick" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+                </StackPanel>
+              </shad:Card>
+              <shad:Card Padding="6,5">
+                <StackPanel Spacing="6">
+                  <TextBlock Text="输出与预设" FontSize="13" FontWeight="SemiBold" Opacity="0.75" />
+              <Grid ColumnDefinitions="64,*" ColumnSpacing="6">
+                <TextBlock Grid.Column="0" Text="标签分隔" FontSize="13" VerticalAlignment="Center" Opacity="0.7" />
+                <TextBox Grid.Column="1" Classes="compactInput" Text="{Binding Rules.TagSeparator}"
+                         shad:TextBoxAssist.Clearable="True" />
+              </Grid>
+              <Grid IsVisible="False" ColumnDefinitions="64,*" ColumnSpacing="6">
+                <TextBlock Grid.Column="0" Text="分组分隔" FontSize="13" VerticalAlignment="Center" Opacity="0.7" />
+                <TextBox Grid.Column="1" Classes="compactInput" Text="{Binding Rules.GroupSeparator}"
+                         shad:TextBoxAssist.Clearable="True" />
+              </Grid>
+              <Grid IsVisible="False" ColumnDefinitions="64,*" ColumnSpacing="6">
+                <TextBlock Grid.Column="0" Text="前缀" FontSize="13" VerticalAlignment="Center" Opacity="0.7" />
+                <TextBox Grid.Column="1" Classes="compactInput" Text="{Binding Rules.Prefix}"
+                         shad:TextBoxAssist.Clearable="True" />
+              </Grid>
+              <Grid IsVisible="False" ColumnDefinitions="64,*" ColumnSpacing="6">
+                <TextBlock Grid.Column="0" Text="后缀" FontSize="13" VerticalAlignment="Center" Opacity="0.7" />
+                <TextBox Grid.Column="1" Classes="compactInput" Text="{Binding Rules.Suffix}"
+                         shad:TextBoxAssist.Clearable="True" />
+              </Grid>
+              <Grid IsVisible="False" ColumnDefinitions="64,*,Auto" ColumnSpacing="6">
+                <TextBlock Grid.Column="0" Text="最大标签" FontSize="13" VerticalAlignment="Center" Opacity="0.7" />
+                <TextBox Grid.Column="1" Classes="compactInput" Text="{Binding Rules.MaxTags}"
+                         shad:TextBoxAssist.Clearable="True" />
+                <ToggleSwitch Grid.Column="2" Content="尾分隔" FontSize="13" IsChecked="{Binding Rules.TrailingSeparator}"
+                              VerticalAlignment="Center" ToolTip.Tip="输出是否保留尾部分隔符" />
+              </Grid>
+                </StackPanel>
+              </shad:Card>
+              <shad:Card Padding="6,5">
+                <StackPanel Spacing="4">
+                  <Grid ColumnDefinitions="96,*" ColumnSpacing="6">
+                    <TextBlock Text="质量预设" FontSize="13" VerticalAlignment="Center" Opacity="0.7" />
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding Rules.QualityPresetNames}"
+                              SelectedIndex="{Binding Rules.QualityPresetIndex}" />
+                  </Grid>
+                  <TextBox Classes="compactInput" Text="{Binding Rules.QualityCustomTags}"
+                           IsVisible="{Binding Rules.IsCustomQualityPreset}"
+                           PlaceholderText="自定义质量标签，用英文逗号分隔" />
+                </StackPanel>
+              </shad:Card>
+              <shad:Card IsVisible="False" Padding="8,6">
+                <StackPanel Spacing="6">
+                  <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <TextBlock Text="Prompt 预览" FontSize="13" FontWeight="SemiBold" Opacity="0.75" VerticalAlignment="Center" />
+                    <shad:Badge Variant="Secondary" VerticalAlignment="Center">
+                      <TextBlock FontSize="13" FontWeight="SemiBold" FontFamily="Consolas,Menlo,monospace">
+                        <Run Text="{Binding Prompt.TagCount}" /><Run Text=" tags / " /><Run Text="{Binding Prompt.CharCount}" /><Run Text=" chars" />
+                      </TextBlock>
+                    </shad:Badge>
+                  </StackPanel>
+                  <TextBox Text="{Binding Prompt.PromptText}" IsReadOnly="True"
+                           AcceptsReturn="True" TextWrapping="Wrap" MinHeight="96"
+                           FontSize="13" FontFamily="Consolas,Menlo,monospace"
+                           PlaceholderText="Prompt 预览（切换图片/阈值/规则后自动更新）" />
+                </StackPanel>
+              </shad:Card>
+            </StackPanel>
+          </ScrollViewer>
+          <shad:Card Grid.Row="2" Padding="6,4">
+            <Grid RowDefinitions="Auto,*" RowSpacing="3">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="Prompt 预览" FontSize="13" FontWeight="SemiBold" Opacity="0.75"
+                           VerticalAlignment="Center" LineHeight="16" />
+                <TextBlock Grid.Column="1" FontSize="13" Opacity="0.65" FontFamily="Consolas,Menlo,monospace"
+                           VerticalAlignment="Center" LineHeight="16">
+                  <Run Text="{Binding Prompt.TagCount}" /><Run Text=" tags · " /><Run Text="{Binding Prompt.CharCount}" /><Run Text=" chars" />
+                </TextBlock>
+              </Grid>
+              <TextBox Grid.Row="1" Text="{Binding Prompt.PromptText}" IsReadOnly="True"
+                       AcceptsReturn="True" TextWrapping="Wrap" Height="128"
+                       FontSize="13" FontFamily="Consolas,Menlo,monospace"
+                       PlaceholderText="暂无 Prompt" />
+            </Grid>
+          </shad:Card>
+          <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="6">
+            <Button Grid.Column="0" Classes="toolbarBtn" Command="{Binding CopyPromptCommand}"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    ToolTip.Tip="复制当前 Prompt (Ctrl+Alt+C)"
+                    AutomationProperties.Name="复制 Prompt">
+              <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                <PathIcon Data="{x:Static shad:Icons.ClipBoard}" Width="12" Height="12" VerticalAlignment="Center" />
+                <TextBlock Text="复制 Prompt" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+            <Button Grid.Column="1" Classes="toolbarBtn" Command="{Binding ExportPromptCommand}"
+                    ToolTip.Tip="另存为同名 .txt（需确认路径，不覆盖图片）"
+                    AutomationProperties.Name="导出 Prompt">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                    <PathIcon Data="{x:Static shad:Icons.ArrowDown}" Width="12" Height="12" VerticalAlignment="Center" />
+                <TextBlock Text="导出" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+          </Grid>
+        </Grid>
+      </Border>
+      <Border Grid.Row="1" Grid.ColumnSpan="5"
+              Opacity="{Binding IsDragOver, Converter={StaticResource BoolOpacityConverter}}"
+              IsHitTestVisible="False" Background="#22007ACC" BorderBrush="{DynamicResource SemanticInfoBrush}"
+              BorderThickness="3" CornerRadius="8" Margin="8">
+        <Border.Transitions>
+          <Transitions>
+            <DoubleTransition Property="Opacity" Duration="0:0:0.16" />
+          </Transitions>
+        </Border.Transitions>
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6">
+          <TextBlock Text="松开以导入图片或文件夹" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" />
+          <TextBlock Text="支持 PNG、JPEG、WebP、BMP、GIF、TIFF" FontSize="12" Opacity="0.8" HorizontalAlignment="Center" />
+        </StackPanel>
+      </Border>
+    </Grid>
+
+    <!-- Status bar -->
+    <Border Grid.Row="2" BorderBrush="{DynamicResource ThemeBorderBrush}"
+            BorderThickness="0,1,0,0" Padding="10,4">
+      <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" ColumnSpacing="10">
+        <Ellipse Grid.Column="0" Width="7" Height="7" VerticalAlignment="Center"
+                 Fill="{Binding Phase, Converter={StaticResource WindowPhaseBrushConverter}}" />
+        <TextBlock Grid.Column="1" Text="{Binding StatusBarText}"
+                   FontSize="11.5" VerticalAlignment="Center" />
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6"
+                    IsVisible="{Binding IsOperationRunning}" VerticalAlignment="Center">
+          <ProgressBar Width="100" Height="4" VerticalAlignment="Center"
+                       Minimum="0" Maximum="{Binding BatchTotal}" Value="{Binding BatchCompleted}" />
+          <TextBlock Text="{Binding BatchProgressText}" VerticalAlignment="Center"
+                     FontSize="11.5" FontWeight="SemiBold" FontFamily="Consolas,Menlo,monospace" />
+        </StackPanel>
+        <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <TextBlock FontSize="11.5" Opacity="0.65" VerticalAlignment="Center">
+            <Run Text="{Binding CurrentModelName}" />
+          </TextBlock>
+          <shad:Badge Variant="Secondary" VerticalAlignment="Center">
+            <TextBlock FontSize="11" FontWeight="SemiBold">
+              <Run Text="{Binding ImageCount}" /><Run Text=" 张" />
+            </TextBlock>
+          </shad:Badge>
+        </StackPanel>
+      </Grid>
+    </Border>
+  </Grid>
+</shad:Window>

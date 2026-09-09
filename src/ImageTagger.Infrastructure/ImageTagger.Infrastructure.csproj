@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>ONNX, image, metadata, file and settings implementations for ImageTagger.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ImageTagger.Core\ImageTagger.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="SixLabors.ImageSharp" />
+    <PackageReference Include="MetadataExtractor" />
+    <PackageReference Include="CsvHelper" />
+    <PackageReference Include="JsonSchema.Net" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" />
+    <PackageReference Include="Serilog" />
+    <PackageReference Include="Serilog.Sinks.File" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Inference runtime: macOS CoreML/CPU and Windows CPU baseline (ADR 0001). -->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" />
+  </ItemGroup>
+</Project>
