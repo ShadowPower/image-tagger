@@ -18,7 +18,6 @@
   <data name="Toast_SkippedDuplicates" xml:space="preserve"><value>已跳过重复文件</value></data>
   <data name="Toast_NonBlockingError" xml:space="preserve"><value>操作未完成，已记录详细信息</value></data>
   <data name="Toast_BatchErrorTitle" xml:space="preserve"><value>批量任务摘要</value></data>
-  <data name="Dialog_InstallFailedTitle" xml:space="preserve"><value>模型安装校验失败</value></data>
   <data name="Dialog_ClearSessionTitle" xml:space="preserve"><value>清空图片会话</value></data>
   <data name="Dialog_ClearSessionMessage" xml:space="preserve"><value>将清空当前图片列表与识别结果，该操作不删除磁盘文件。正在运行的任务将被取消。是否继续？</value></data>
   <data name="Dialog_OverwriteTitle" xml:space="preserve"><value>覆盖同名文本</value></data>
@@ -31,15 +30,6 @@
   <data name="Settings_ModelSection" xml:space="preserve"><value>模型</value></data>
   <data name="Settings_AppearanceSection" xml:space="preserve"><value>外观与行为</value></data>
   <data name="Settings_PerformanceSection" xml:space="preserve"><value>性能</value></data>
-  <data name="Settings_InstallPack" xml:space="preserve"><value>安装 Model Pack</value></data>
-  <data name="Settings_ValidateBuiltIn" xml:space="preserve"><value>验证内置模型</value></data>
-  <data name="Settings_Uninstall" xml:space="preserve"><value>卸载</value></data>
-  <data name="Settings_BuiltInCannotUninstall" xml:space="preserve"><value>内置模型不能卸载</value></data>
-  <data name="Settings_InstallSuccess" xml:space="preserve"><value>模型安装成功</value></data>
-  <data name="Settings_InstallFailed" xml:space="preserve"><value>模型安装失败</value></data>
-  <data name="Settings_ValidateSuccess" xml:space="preserve"><value>内置模型校验通过</value></data>
-  <data name="Settings_ValidateFailed" xml:space="preserve"><value>内置模型校验失败</value></data>
-  <data name="Settings_UninstallSuccess" xml:space="preserve"><value>已卸载自定义模型</value></data>
   <data name="Settings_Recalibrate" xml:space="preserve"><value>重新检测性能</value></data>
   <data name="Settings_Recalibrated" xml:space="preserve"><value>已清除性能调优结果，下次识别时重新测量</value></data>
   <data name="Settings_ClearCache" xml:space="preserve"><value>清除内存缓存</value></data>

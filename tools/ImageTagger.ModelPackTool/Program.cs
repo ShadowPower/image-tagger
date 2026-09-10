@@ -1,6 +1,6 @@
 using ImageTagger.ModelPackTool;
 
-// Model Pack development tool: pack source assets into the standard layout, or validate a pack/.itmodel.
+// Model Pack development tool: pack source assets into the standard layout, or validate a pack directory.
 // Input paths come from the command line only; no machine-specific paths are stored in the repo.
 return args switch
 {
@@ -11,7 +11,7 @@ return args switch
 
 static int Pack(string[] args)
 {
-    string? source = null, output = null, itmodel = null, translations = null;
+    string? source = null, output = null, translations = null;
     string id = "wd-eva02-tagger-2026-canary";
     double threshold = 0.6094;
     for (int i = 1; i < args.Length; i += 2)
@@ -20,7 +20,6 @@ static int Pack(string[] args)
         {
             case "--source": source = args[i + 1]; break;
             case "--output": output = args[i + 1]; break;
-            case "--itmodel": itmodel = args[i + 1]; break;
             case "--id": id = args[i + 1]; break;
             case "--threshold": threshold = double.Parse(args[i + 1]); break;
             case "--translations": translations = args[i + 1]; break;
@@ -31,10 +30,10 @@ static int Pack(string[] args)
     }
     if (source is null || output is null)
     {
-        Console.Error.WriteLine("usage: pack --source <dir> --output <dir> [--itmodel <file>] [--id <id>] [--threshold <0..1>] [--translations <file>]");
+        Console.Error.WriteLine("usage: pack --source <dir> --output <dir> [--id <id>] [--threshold <0..1>] [--translations <file>]");
         return 2;
     }
-    return PackCommand.Run(source, output, itmodel, id, threshold, translations);
+    return PackCommand.Run(source, output, id, threshold, translations);
 }
 
 static int Validate(string[] args)
@@ -52,7 +51,7 @@ static int Validate(string[] args)
     }
     if (pack is null)
     {
-        Console.Error.WriteLine("usage: validate --pack <dir|.itmodel>");
+        Console.Error.WriteLine("usage: validate --pack <dir>");
         return 2;
     }
     return ValidateCommand.Run(pack);
@@ -61,7 +60,7 @@ static int Validate(string[] args)
 static int Usage()
 {
     Console.WriteLine("usage: ImageTagger.ModelPackTool <pack|validate> [options]");
-    Console.WriteLine("  pack     --source <dir> --output <dir> [--itmodel <file>] [--id <id>] [--threshold <0..1>] [--translations <file>]");
-    Console.WriteLine("  validate --pack <dir|.itmodel>");
+    Console.WriteLine("  pack     --source <dir> --output <dir> [--id <id>] [--threshold <0..1>] [--translations <file>]");
+    Console.WriteLine("  validate --pack <dir>");
     return 2;
 }

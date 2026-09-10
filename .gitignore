@@ -65,7 +65,6 @@ prompt-settings.json
 /Assets/Models/
 *.onnx
 *.safetensors
-*.itmodel
 *.ckpt
 *.pt
 *.pth

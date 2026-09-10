@@ -523,12 +523,6 @@ public sealed class RecognitionServiceTests
                 info.Descriptor, FakeModelPack.Catalog(), fingerprint, pipeline));
         }
 
-        public Task<ModelDescriptor> InstallAsync(string itmodelPath, CancellationToken cancellationToken) =>
-            throw new NotSupportedException("测试桩不支持安装。");
-
-        public void Uninstall(string modelPackId)
-        {
-        }
     }
 
     /// <summary>内存设置桩：只存取 <see cref="AppSettings"/>，不碰文件系统。</summary>

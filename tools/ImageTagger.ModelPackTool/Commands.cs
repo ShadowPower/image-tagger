@@ -1,53 +1,8 @@
-using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
 namespace ImageTagger.ModelPackTool;
-
-public static class ItModel
-{
-    public static void Create(string packRoot, string target)
-    {
-        using var stream = File.Create(target);
-        using var zip = new ZipArchive(stream, ZipArchiveMode.Create);
-        foreach (var name in PackFiles.All)
-            zip.CreateEntryFromFile(Path.Combine(packRoot, name), name, CompressionLevel.Optimal);
-    }
-
-    /// <summary>Extracts to a fresh temp dir with entry guards; returns the dir (caller deletes).</summary>
-    public static string ExtractToTempDir(string path)
-    {
-        var temp = Directory.CreateTempSubdirectory("itmodel-").FullName;
-        try
-        {
-            using var archive = ZipFile.OpenRead(path);
-            var seen = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var entry in archive.Entries)
-            {
-                if (!seen.Add(entry.FullName))
-                    throw new InvalidDataException($"duplicate archive entry: {entry.FullName}");
-                if (entry.FullName.Contains("..") || Path.IsPathRooted(entry.FullName) ||
-                    entry.FullName.Contains('/') || entry.FullName.Contains('\\'))
-                    throw new InvalidDataException($"unsafe archive entry: {entry.FullName}");
-            }
-            foreach (var name in PackFiles.All)
-            {
-                var entry = archive.GetEntry(name) ?? throw new InvalidDataException($"missing archive entry: {name}");
-                entry.ExtractToFile(Path.Combine(temp, name), overwrite: false);
-            }
-            if (archive.Entries.Count != PackFiles.All.Length)
-                throw new InvalidDataException(
-                    $"archive must contain exactly {PackFiles.All.Length} entries, found {archive.Entries.Count}");
-            return temp;
-        }
-        catch
-        {
-            try { Directory.Delete(temp, recursive: true); } catch { }
-            throw;
-        }
-    }
-}
 
 public static class PackCommand
 {
@@ -55,7 +10,7 @@ public static class PackCommand
     private const string DefaultDisplayName = "WD EVA02 Tagger 2026 Canary";
 
     public static int Run(
-        string source, string output, string? itmodel, string modelId, double threshold,
+        string source, string output, string modelId, double threshold,
         string? translationsFile = null)
     {
         source = Path.GetFullPath(source);
@@ -187,11 +142,6 @@ public static class PackCommand
         foreach (var g in orderedGroups)
             Console.WriteLine($"  group {g.Id}: {rows.Count(r => r.Group == g.Id)} labels");
 
-        if (itmodel is not null)
-        {
-            ItModel.Create(output, Path.GetFullPath(itmodel));
-            Console.WriteLine($"wrote {itmodel}");
-        }
         return 0;
     }
 }
@@ -200,34 +150,21 @@ public static class ValidateCommand
 {
     public static int Run(string pack)
     {
-        string? tempDir = null;
-        string root;
-        try
+        var root = Path.GetFullPath(pack);
+        if (!Directory.Exists(root))
         {
-            if (File.Exists(pack) && pack.EndsWith(".itmodel", StringComparison.OrdinalIgnoreCase))
-            {
-                tempDir = ItModel.ExtractToTempDir(Path.GetFullPath(pack));
-                root = tempDir;
-            }
-            else
-            {
-                root = Path.GetFullPath(pack);
-                if (!Directory.Exists(root)) { Console.Error.WriteLine($"pack not found: {pack}"); return 1; }
-            }
-
-            var errors = Validate(root);
-            if (errors.Count == 0)
-            {
-                Console.WriteLine($"valid: {pack}");
-                return 0;
-            }
-            foreach (var e in errors) Console.Error.WriteLine($"error: {e}");
+            Console.Error.WriteLine($"pack not found: {pack}");
             return 1;
         }
-        finally
+
+        var errors = Validate(root);
+        if (errors.Count == 0)
         {
-            if (tempDir is not null) Directory.Delete(tempDir, recursive: true);
+            Console.WriteLine($"valid: {pack}");
+            return 0;
         }
+        foreach (var e in errors) Console.Error.WriteLine($"error: {e}");
+        return 1;
     }
 
     public static List<string> Validate(string root)

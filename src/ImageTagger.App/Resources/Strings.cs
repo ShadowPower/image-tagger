@@ -21,7 +21,6 @@ public static class Strings
     public const string Toast_NonBlockingError = "操作未完成，已记录详细信息";
     public const string Toast_BatchErrorTitle = "批量任务摘要";
 
-    public const string Dialog_InstallFailedTitle = "模型安装校验失败";
     public const string Dialog_ClearSessionTitle = "清空图片会话";
     public const string Dialog_ClearSessionMessage = "将清空当前图片列表与识别结果，该操作不删除磁盘文件。正在运行的任务将被取消。是否继续？";
     public const string Dialog_OverwriteTitle = "覆盖同名文本";
@@ -35,15 +34,6 @@ public static class Strings
     public const string Settings_ModelSection = "模型";
     public const string Settings_AppearanceSection = "外观与行为";
     public const string Settings_PerformanceSection = "性能";
-    public const string Settings_InstallPack = "安装 Model Pack";
-    public const string Settings_ValidateBuiltIn = "验证内置模型";
-    public const string Settings_Uninstall = "卸载";
-    public const string Settings_BuiltInCannotUninstall = "内置模型不能卸载";
-    public const string Settings_InstallSuccess = "模型安装成功";
-    public const string Settings_InstallFailed = "模型安装失败";
-    public const string Settings_ValidateSuccess = "内置模型校验通过";
-    public const string Settings_ValidateFailed = "内置模型校验失败";
-    public const string Settings_UninstallSuccess = "已卸载自定义模型";
     public const string Settings_Recalibrate = "重新检测性能";
     public const string Settings_Recalibrated = "已清除性能调优结果，下次识别时重新测量";
     public const string Settings_ClearCache = "清除内存缓存";

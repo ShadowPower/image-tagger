@@ -185,7 +185,7 @@ id,name,group,translation,count
 - Model Pack 验证成功后才出现在模型选择器中；未知 schema、任务类型、算子/version/参数或 activation 必须给出明确错误。
 - 构建工具从源模型资产一次性生成上述标准包；应用运行时只理解标准 Model Pack，不兼容或探测训练仓库的任意目录布局。
 - 首版不做第三方插件加载和动态程序集执行；扩展点是编译期适配器 + 数据驱动 manifest，兼顾可扩展性、安全性和 KISS。
-- 将来安装其它模型时使用 `.itmodel` 文件。它是根目录直接包含上述文件的 ZIP 容器；应用先在临时目录解压、校验路径/hash/schema/适配器/空间需求，再原子移动到应用托管的 Models 目录。用户不选择或维护模型安装路径。
+- 其它模型以同样的标准目录结构提供；用户显式选择目录后，应用直接校验路径、hash、schema 和适配器契约，不复制或改写外部模型文件。
 
 #### 3.4.1 模型特定的预处理架构
 
@@ -256,7 +256,7 @@ ModelInputTensor
 
 **高性能实现**
 
-- manifest 只在模型安装/加载时解析一次。验证通过后转换为不可变的顺序执行计划，并按流水线指纹缓存；每张图片热路径不使用 JSON、反射、字符串查找或动态类型。
+- manifest 只在模型加载时解析一次。验证通过后转换为不可变的顺序执行计划，并按流水线指纹缓存；每张图片热路径不使用 JSON、反射、字符串查找或动态类型。
 - 首版不实现通用算子融合优化器。各步骤直接调用第三方库；只保留将最终像素写入 ORT Tensor 所必需的最小数据封送代码。只有 profiling 证明预处理是实际瓶颈时，才针对已验证的具体步骤组合增加优化，并单独记录 ADR。
 - `PreprocessIntoAsync` 直接写入池化 batch buffer 的对应样本切片，避免“每图分配 Tensor → 再 concatenate”的额外分配与复制。
 - Pixel buffer、临时缩放 buffer 和 Tensor buffer 使用 .NET `ArrayPool/MemoryPool` 或第三方库自带的 allocator；所有成功、异常和取消路径都归还。
@@ -714,18 +714,12 @@ Prompt 每次按以下固定流水线生成：
 
 ### 11.1 模型
 
-- 内置 WD EVA02 模型固定显示在列表首位，安装后首次启动即可使用，不能卸载或移除。
-- “安装 Model Pack”从文件选择器导入 `.itmodel`；应用验证后复制到自己的托管模型目录，不把任意外部目录注册为运行依赖。
-- 自定义 Model Pack 可以卸载；操作只删除应用托管的副本，不影响用户原始 `.itmodel` 文件。
-- “验证内置模型”重新执行文件存在性、hash、manifest、标签数和 ONNX 契约检查；损坏时引导重新安装软件。
+- 设置页通过目录选择器配置一个外部 Model Pack；应用验证后保存目录路径，不复制、移动或删除其中的文件。
+- “清除”只移除当前配置，不删除外部 Model Pack 目录。
+- 每次加载都会执行文件存在性、hash、manifest、标签数和 ONNX 契约检查。
 - 显示输入尺寸、标签数、文件 hash 校验结果和标签目录构建信息。
 
-模型发现只有两个受控来源：
-
-1. `IAppResourceLocator` 返回的只读内置 Models 资源目录。
-2. 应用平台数据目录中的托管 Models 目录，用于用户安装的 `.itmodel`。
-
-应用不读取模型路径环境变量，不提供“模型根目录”输入框，也不扫描当前工作目录或任意用户文件夹。
+模型只来自用户在设置页显式选择的一个外部目录。应用不读取模型路径环境变量，也不扫描当前工作目录或任意用户文件夹。
 
 绝对路径隔离规则：
 
@@ -833,7 +827,7 @@ Core 不引用 Avalonia、ShadUI、ONNX Runtime 或文件选择器 API。
 | CSV | CsvHelper | 读取/生成 `tags.csv`，处理 UTF-8、引号、逗号和换行边界 |
 | JSON/Schema | System.Text.Json + JsonSchema.Net | JSON 序列化与 manifest 结构校验，不自写 JSON parser/validator |
 | 缓存与依赖注入 | Microsoft.Extensions.Caching.Memory + DependencyInjection | 不自写通用缓存或服务容器 |
-| 压缩与哈希 | System.IO.Compression + System.Security.Cryptography | 使用 .NET 标准库处理 `.itmodel` 与 SHA-256 |
+| 哈希 | System.Security.Cryptography | 使用 .NET 标准库处理 SHA-256 |
 | 日志 | Serilog + File sink | 成熟的滚动文件能力，配置简单且无需自制 Provider |
 | 测试 | xUnit + Avalonia.Headless | 领域、解析和关键 UI 状态测试 |
 
@@ -915,7 +909,7 @@ GenerationInfo
 | `IImageImportService` | 规范化路径、去重、读取基本文件信息 |
 | `IThumbnailService` | 异步生成和缓存缩略图 |
 | `IAppResourceLocator` | 按平台返回内置资源根与应用托管数据根，不暴露工作目录假设 |
-| `IModelPackService` | 发现、安装、校验、加载、选择和卸载标准 Model Pack；内部职责拆类但不机械增加接口 |
+| `IModelPackService` | 校验、读取和加载用户显式选择的标准 Model Pack 目录；内部职责拆类但不机械增加接口 |
 | `ITaggerModelAdapter` | 组合特定模型族的预处理、输出激活、标签目录与分组策略 |
 | `IPreprocessOperatorFactory` | 注册版本化原子算子、参数 schema、输入输出类型与 shape inference |
 | `IPreprocessingPipelineCompiler` | 校验有序 steps 并生成缓存的顺序执行计划 |
@@ -1206,7 +1200,7 @@ logs/image-tagger-yyyyMMdd.log
 - 能打开多张图片和文件夹，列表显示缩略图、文件名、像素尺寸、文件大小与格式。
 - 能识别当前图片和全部图片，任务可取消，单图失败不终止整批。
 - 正式发行物无需环境变量或目录设置即可加载内置 WD Canary quality ONNX。
-- 可以通过“安装 Model Pack”导入其它模型；其 manifest 可动态排列标准预处理算子并配置参数，无需修改 UI 或通用推理层。
+- 可以通过设置页选择其它 Model Pack 目录；其 manifest 可动态排列标准预处理算子并配置参数，无需修改 UI 或通用推理层。
 - 阈值取自当前 Model Pack（如 WD Canary 为 60.94%），切换模型自动同步，无需重推理即可刷新标签和 Prompt。
 - 标签按 Model Pack manifest 声明的分组与顺序展示（WD Canary：分级、角色、通用）。
 - 每个标签同时显示原始标签、中文翻译和两位小数置信度。

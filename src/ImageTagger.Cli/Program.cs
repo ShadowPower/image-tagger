@@ -32,7 +32,6 @@ static class Cli
         return args[0].ToLowerInvariant() switch
         {
             "pack" => Pack(args),
-            "unpack" => Unpack(args),
             "validate" => Validate(args),
             _ => Usage(),
         };
@@ -41,35 +40,14 @@ static class Cli
     private static int Pack(string[] args)
     {
         string? source = Option(args, "--source"), output = Option(args, "--output");
-        if (source is null || output is null) { Console.Error.WriteLine("usage: model pack --source <dir> --output <dir> [--itmodel <file>]"); return 2; }
-        return PackCommand.Run(source, output, Option(args, "--itmodel"), Option(args, "--id") ?? "wd-eva02-tagger-2026-canary", double.TryParse(Option(args, "--threshold"), out var t) ? t : 0.6094, Option(args, "--translations"));
-    }
-
-    private static int Unpack(string[] args)
-    {
-        var archive = args.Length > 1 && !args[1].StartsWith("--") ? args[1] : null;
-        var output = Option(args, "--output");
-        if (archive is null || output is null) { Console.Error.WriteLine("usage: model unpack <archive.itmodel> --output <dir>"); return 2; }
-        try
-        {
-            var root = Path.GetFullPath(output);
-            if (Directory.Exists(root) && Directory.EnumerateFileSystemEntries(root).Any()) { Console.Error.WriteLine("output directory is not empty"); return 1; }
-            var temp = ItModel.ExtractToTempDir(Path.GetFullPath(archive));
-            try
-            {
-                Directory.CreateDirectory(root);
-                foreach (var file in Directory.EnumerateFiles(temp)) File.Move(file, Path.Combine(root, Path.GetFileName(file)), overwrite: false);
-            }
-            finally { try { Directory.Delete(temp, true); } catch { } }
-            Console.WriteLine($"unpacked {archive} to {root}"); return 0;
-        }
-        catch (Exception ex) { Console.Error.WriteLine($"unpack failed: {ex.Message}"); return 1; }
+        if (source is null || output is null) { Console.Error.WriteLine("usage: model pack --source <dir> --output <dir>"); return 2; }
+        return PackCommand.Run(source, output, Option(args, "--id") ?? "wd-eva02-tagger-2026-canary", double.TryParse(Option(args, "--threshold"), out var t) ? t : 0.6094, Option(args, "--translations"));
     }
 
     private static int Validate(string[] args)
     {
         var pack = Option(args, "--pack");
-        if (pack is null) { Console.Error.WriteLine("usage: model validate --pack <dir|.itmodel>"); return 2; }
+        if (pack is null) { Console.Error.WriteLine("usage: model validate --pack <dir>"); return 2; }
         return ValidateCommand.Run(pack);
     }
 
@@ -212,7 +190,7 @@ static class Cli
     private static void WriteFailure(ImageImportFailure f, bool jsonl) { if (jsonl) Emit(JsonSerializer.Serialize(new CliFailureResult(1, "image_result", "failed", f.Path, f.FileName, new CliError(f.Kind.ToString().ToLowerInvariant(), f.Message)), JsonContext.CliFailureResult)); else Console.Error.WriteLine($"{f.FileName}: {f.Message}"); }
     private static void Emit(string text) => Output.WriteLine(text);
     private static string? Option(string[] args, string name) { var i = Array.IndexOf(args, name); return i >= 0 && i + 1 < args.Length ? args[i + 1] : null; }
-    private static int Usage() { Console.WriteLine("usage: imagetagger [tag] <inputs...> | model <pack|unpack|validate> ..."); return 2; }
+    private static int Usage() { Console.WriteLine("usage: imagetagger [tag] <inputs...> | model <pack|validate> ..."); return 2; }
 
 }
 

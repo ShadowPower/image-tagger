@@ -280,14 +280,7 @@ public sealed class LayoutRegressionTests
     {
         public IReadOnlyList<ModelPackInfo> Discover() => Array.Empty<ModelPackInfo>();
 
-        public Task<ModelDescriptor> InstallAsync(string itmodelPath, CancellationToken cancellationToken) =>
-            throw new InvalidOperationException("install not stubbed");
-
         public Task<LoadedModelPack> LoadAsync(string modelPackId, CancellationToken cancellationToken) =>
             throw new InvalidOperationException("load not stubbed");
-
-        public void Uninstall(string modelPackId)
-        {
-        }
     }
 }

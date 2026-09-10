@@ -63,7 +63,7 @@ public static class TaggerErrorMessages
 /// <summary>
 /// 领域/平台错误到 Toast/Dialog/日志的映射（DESIGN 12.2 / 18.1，TASKS G-05）。
 /// Toast：复制成功、导出成功、跳过重复、非阻断错误。
-/// Dialog：安装校验失败、清空会话确认、覆盖同名文本、超大图片确认。
+/// Dialog：清空会话确认、覆盖同名文本、超大图片确认。
 /// 同批重复错误合并为摘要 Toast。
 /// Avalonia 具体 Toast host 接线见 TODO，ViewModel 只依赖本接口。
 /// </summary>
@@ -316,10 +316,6 @@ public sealed class UserNotificationService : IUserNotificationService
                 error.InnerException);
         ShowToastInternal(Strings.Toast_BatchErrorTitle, summary, NotificationKind.Warning);
     }
-
-    /// <summary>安装校验失败 Dialog（技术详情折叠）。</summary>
-    public Task<bool> ReportInstallValidationFailedAsync(string details, CancellationToken cancellationToken = default) =>
-        ShowDialogAsync(Strings.Dialog_InstallFailedTitle, Strings.Dialog_InstallFailedTitle, details, cancellationToken);
 
     /// <summary>清空有结果的会话确认。</summary>
     public Task<bool> ConfirmClearSessionAsync(CancellationToken cancellationToken = default) =>
