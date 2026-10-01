@@ -8,5 +8,6 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="ModelPacks\model-pack.schema.json" />
+    <EmbeddedResource Include="ModelPacks\model-pack.schema.v2.json" />
   </ItemGroup>
 </Project>

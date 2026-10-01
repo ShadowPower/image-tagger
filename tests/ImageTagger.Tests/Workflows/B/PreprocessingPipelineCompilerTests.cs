@@ -27,6 +27,17 @@ public sealed class PreprocessingPipelineCompilerTests
     }
 
     [Fact]
+    public void Compiles_v2_pipeline_with_generic_geometry_operators()
+    {
+        var compiled = new PreprocessingPipelineCompiler().ValidateAndCompile(V2Pipeline(64), Input(64));
+
+        Assert.Equal(10, compiled.Operators.Count);
+        Assert.Equal([3, 64, 64], compiled.PerSampleTensorContract.Shape);
+        Assert.Equal("resize-fit", compiled.Steps[4].Op);
+        Assert.Equal("pad-to-size", compiled.Steps[5].Op);
+    }
+
+    [Fact]
     public void Parameter_or_input_change_produces_a_distinct_fingerprint()
     {
         var compiler = new PreprocessingPipelineCompiler();
@@ -102,6 +113,24 @@ public sealed class PreprocessingPipelineCompilerTests
         var complete = ValidPipeline();
         var noPermute = complete with { OrderedSteps = complete.OrderedSteps[..^1] };
 
+        // v2 算子出现在 v1 流水线中被编译器拒绝（manifest schema 是规范门禁，编译器仍需防御）。
+        var v2OpInV1 = ValidPipeline();
+        v2OpInV1.OrderedSteps[5] = Step("resize-fit",
+            ("width", 64), ("height", 64), ("sampler", "pillow-bilinear-v1"), ("rounding", "floor"));
+
+        // v2 流水线最终形状无法静态确定（缺少 pad/crop/resize 收敛）。
+        var openFinalShape = V2Pipeline(64) with
+        {
+            OrderedSteps =
+            [
+                Step("decode", ("frame", "first"), ("colorManagement", "ignore")),
+                Step("ensure-color", ("mode", "rgb")),
+                Step("resize-fit", ("width", 64), ("height", 64), ("sampler", "pillow-bilinear-v1"), ("rounding", "floor")),
+                Step("cast", ("dtype", "float32")),
+                Step("permute", ("order", new[] { 2, 0, 1 })),
+            ],
+        };
+
         return new TheoryData<PreprocessingPipelineDescriptor, ModelInputTensor>
         {
             { unknown, Input(448) },
@@ -111,6 +140,8 @@ public sealed class PreprocessingPipelineCompilerTests
             { noTensor, Input(448) },
             { noPermute, Input(448) },
             { ValidPipeline(), Input(224) },
+            { v2OpInV1, Input(448) },
+            { openFinalShape, Input(64) },
         };
     }
 
@@ -155,6 +186,24 @@ public sealed class PreprocessingPipelineCompilerTests
         DType = TensorDType.Float32,
         Layout = "NCHW",
         Shape = [3, size, size],
+    };
+
+    internal static PreprocessingPipelineDescriptor V2Pipeline(int size = 64) => new()
+    {
+        SchemaVersion = 2,
+        OrderedSteps =
+        [
+            Step("decode", ("frame", "first"), ("colorManagement", "ignore")),
+            Step("exif-transpose"),
+            Step("ensure-color", ("mode", "rgb-or-rgba-if-transparent")),
+            Step("alpha-composite", ("when", "has-alpha"), ("background", new[] { 255, 255, 255 })),
+            Step("resize-fit", ("width", size), ("height", size), ("sampler", "pillow-bilinear-v1"), ("rounding", "floor")),
+            Step("pad-to-size", ("width", size), ("height", size), ("anchor", "floor-center"), ("background", new[] { 0, 0, 0 })),
+            Step("cast", ("dtype", "float32")),
+            Step("divide", ("value", 255d)),
+            Step("normalize", ("mean", new[] { 0.5, 0.5, 0.5 }), ("std", new[] { 0.5, 0.5, 0.5 })),
+            Step("permute", ("order", new[] { 2, 0, 1 })),
+        ],
     };
 
     private sealed class CountingFactory(IPreprocessOperatorFactory inner) : IPreprocessOperatorFactory

@@ -236,6 +236,7 @@ ModelInputTensor
 - 每个算子由稳定的 `op + version` 标识。版本改变表示数值语义可能改变，旧 Model Pack 不会静默升级到新算法。
 - 每个算子拥有封闭参数 schema：字段类型、必填项、枚举、数值范围、数组长度和默认值都明确；未知参数直接报错，避免拼写错误被忽略。
 - 首版标准算子只包括当前 WD 与常见 RGB/CLIP 输入需要的：`decode`、`exif-transpose`、`ensure-color`、`alpha-composite`、`pad-to-square`、`resize`、`crop`、`reorder-channels`、`cast`、`divide`、`normalize` 和 `permute`。其它算子按真实模型需求再增加。
+- schemaVersion 2 在 v1 算子集之上增加两个通用几何算子与一个通用采样器：`resize-fit`（等比缩放到目标框内，`rounding` 取 `floor`/`round`）、`pad-to-size`（任意目标宽高 + `floor-center`/`center` 锚点 + 背景色）和 `pillow-bilinear-v1`（Pillow BILINEAR 的定点移植，与 `pillow-bicubic-v1` 共用同一引擎）。v1 manifest 原样有效；未知 schemaVersion 仍被明确拒绝。
 - 只允许少量声明式条件，例如 `when: has-alpha`；不支持表达式、循环、分支脚本、反射类型名、文件访问或网络访问。
 
 **类型链与契约校验**
@@ -253,6 +254,7 @@ ModelInputTensor
 - CLIP 风格模型可以组合 `decode → exif-transpose → ensure-color(RGB) → resize(short-edge) → crop(center) → cast → divide → normalize(CLIP mean/std) → permute`。
 - 拉伸输入模型可以省略 pad/crop，直接给 `resize` 指定固定宽高。
 - 新的预处理需求若能由已有原子算子准确表达，只需新的 manifest；只有出现新插值核、特殊色彩变换等原子能力时才增加一个经过测试的新算子版本。
+- “先等比缩放到目标框、再补边/裁剪”的组合由 v2 的 `resize-fit` + `pad-to-size`/`crop` 表达（例如先 fit 到 N×N 再黑边补到方形）。`resize-fit` 的输出尺寸依赖输入长宽比：编译期输入未知时保持未知维（0），必须由后续 pad/crop/resize 收敛为静态形状，否则流水线被拒绝；执行期按同一 `rounding` 规则重新计算。
 
 **高性能实现**
 
@@ -381,6 +383,8 @@ ModelInputTensor
 - 标签列表、各组计数和当前 Prompt 在 100 ms 防抖后重算。
 - 分级的四个概率始终显示，不受阈值隐藏；分级的最高概率项标记为“最可能”。
 - 标签摘要与各处阈值以百分数展示；模型包的 `DefaultThreshold` 即是唯一事实来源，不再单独持久化用户阈值。
+
+schemaVersion 2 的模型包可以为每个分组声明推荐阈值（`groups[].defaultThreshold`）：包内存在任一推荐值且用户尚未自定义阈值规则时，默认进入按分组阈值模式；解析优先级为“用户分组覆盖 > 模型包推荐值 > 全局阈值”，切回全局模式即忽略推荐值。未声明推荐值的模型包（含 WD Canary）行为与首版完全一致。
 
 工具栏忙碌状态：
 

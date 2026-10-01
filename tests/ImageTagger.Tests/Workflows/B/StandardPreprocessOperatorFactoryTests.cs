@@ -14,7 +14,11 @@ public sealed class StandardPreprocessOperatorFactoryTests
         { "ensure-color", Parameters(("mode", "rgb-or-rgba-if-transparent")) },
         { "alpha-composite", Parameters(("when", "has-alpha"), ("background", new[] { 255, 255, 255 })) },
         { "pad-to-square", Parameters(("anchor", "floor-center"), ("background", new object[] { 255L, 255L, 255L })) },
+        { "pad-to-size", Parameters(("width", 448L), ("height", 448L), ("anchor", "center"), ("background", new object[] { 0L, 0L, 0L })) },
         { "resize", Parameters(("width", 448L), ("height", 448L), ("sampler", "pillow-bicubic-v1")) },
+        { "resize", Parameters(("width", 448L), ("height", 448L), ("sampler", "pillow-bilinear-v1")) },
+        { "resize-fit", Parameters(("width", 448L), ("height", 448L), ("sampler", "pillow-bilinear-v1"), ("rounding", "floor")) },
+        { "resize-fit", Parameters(("width", 448L), ("height", 448L), ("sampler", "pillow-bicubic-v1"), ("rounding", "round")) },
         { "crop", Parameters(("width", 224), ("height", 224), ("anchor", "center")) },
         { "reorder-channels", Parameters(("order", new[] { 2, 1, 0 })) },
         { "cast", Parameters(("dtype", "float32")) },
@@ -38,13 +42,25 @@ public sealed class StandardPreprocessOperatorFactoryTests
     }
 
     [Fact]
-    public void Registry_contains_exactly_the_design_operator_set_without_quantization()
+    public void Registry_contains_the_versioned_operator_set_without_quantization()
     {
         var registry = StandardPreprocessOperatorRegistry.Create();
 
-        Assert.Equal(12, registry.Count);
+        Assert.Equal(14, registry.Count);
         Assert.Equal(StandardPreprocessOperatorFactory.AllOperatorNames.Order(), registry.Keys.Order());
         Assert.DoesNotContain(registry.Keys, op => op.Contains("quant", StringComparison.OrdinalIgnoreCase));
+        // v1 的十二个算子必须原样保留（旧模型包兼容）。
+        foreach (var v1Op in new[]
+                 {
+                     "decode", "exif-transpose", "ensure-color", "alpha-composite", "pad-to-square",
+                     "resize", "crop", "reorder-channels", "cast", "divide", "normalize", "permute",
+                 })
+        {
+            Assert.Contains(v1Op, registry.Keys);
+        }
+        // v2 新增的通用几何算子。
+        Assert.Contains("pad-to-size", registry.Keys);
+        Assert.Contains("resize-fit", registry.Keys);
     }
 
     [Theory]
@@ -66,6 +82,11 @@ public sealed class StandardPreprocessOperatorFactoryTests
         { "ensure-color", Parameters(("mode", "CMYK")) },
         { "alpha-composite", Parameters(("when", "has-alpha"), ("background", new[] { 0, 0 })) },
         { "resize", Parameters(("width", 2.5), ("height", 448), ("sampler", "pillow-bicubic-v1")) },
+        { "resize", Parameters(("width", 448), ("height", 448), ("sampler", "nearest-v1")) },
+        { "resize-fit", Parameters(("width", 448L), ("height", 448L), ("sampler", "pillow-bilinear-v1")) },
+        { "resize-fit", Parameters(("width", 448L), ("height", 448L), ("sampler", "pillow-bilinear-v1"), ("rounding", "nearest")) },
+        { "pad-to-size", Parameters(("width", 448L), ("height", 448L), ("anchor", "top-left"), ("background", new[] { 0, 0, 0 })) },
+        { "pad-to-size", Parameters(("width", 448L), ("height", 448L), ("background", new[] { 0, 0, 0 })) },
         { "crop", Parameters(("width", 224), ("height", 224), ("anchor", "top-left")) },
         { "reorder-channels", Parameters(("order", new[] { 0, 0, 2 })) },
         { "cast", Parameters(("dtype", "float16")) },
@@ -86,6 +107,26 @@ public sealed class StandardPreprocessOperatorFactoryTests
         var crop = new StandardPreprocessOperatorFactory("crop");
         Assert.Throws<TaggerException>(() => crop.InferShape(
             (100, 100, 3), Parameters(("width", 224), ("height", 224), ("anchor", "center"))));
+    }
+
+    [Fact]
+    public void Shape_inference_covers_generic_fit_resize_and_pad_to_size()
+    {
+        var fit = new StandardPreprocessOperatorFactory("resize-fit");
+        var fitParameters = Parameters(
+            ("width", 448L), ("height", 448L), ("sampler", "pillow-bilinear-v1"), ("rounding", "floor"));
+        // 600x400 等比缩放：448 长边、短边向下取整。
+        Assert.Equal((448, 298, 3), fit.InferShape((600, 400, 3), fitParameters));
+        // 400x600 竖图放大到长边 448。
+        Assert.Equal((298, 448, 3), fit.InferShape((400, 600, 3), fitParameters));
+        // decode 之后输入未知：保持未知（保留通道数），等待后续几何算子收敛为静态形状。
+        Assert.Equal((0, 0, 4), fit.InferShape((0, 0, 4), fitParameters));
+
+        var pad = new StandardPreprocessOperatorFactory("pad-to-size");
+        var padParameters = Parameters(
+            ("width", 448L), ("height", 448L), ("anchor", "center"), ("background", new object[] { 0L, 0L, 0L }));
+        Assert.Equal((448, 448, 4), pad.InferShape((0, 0, 4), padParameters));
+        Assert.Throws<TaggerException>(() => pad.InferShape((512, 512, 3), padParameters));
     }
 
     [Fact]

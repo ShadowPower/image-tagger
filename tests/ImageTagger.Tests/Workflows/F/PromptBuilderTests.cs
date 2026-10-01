@@ -383,6 +383,46 @@ public sealed class PromptBuilderTests
         Assert.Equal(first, tried);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void Group_mode_applies_pack_defaults_and_user_overrides()
+    {
+        var groups = new GroupDescriptor[]
+        {
+            new("general", "General", "通用", DefaultThreshold: 0.2),
+            new("character", "Character", "角色", DefaultThreshold: 0.8),
+        };
+        var catalog = new TagCatalog(
+        [
+            new TagCatalogEntry(0, "sky", "天空", "general"),
+            new TagCatalogEntry(1, "char_a", "角色A", "character"),
+            new TagCatalogEntry(2, "char_b", "角色B", "character"),
+        ]);
+        var prediction = Snapshot([0.5f, 0.5f, 0.9f]);
+        var settings = PromptSettingsFactory.CreateDefault(groups);
+
+        // 分组推荐阈值：通用 0.2 命中 sky，角色 0.8 只保留 char_b；默认分组顺序为 manifest 逆序。
+        var result = PromptBuilder.Build(catalog, prediction, new TagSelection(), 0.6, settings, groups);
+        Assert.Equal("char b, sky", result.Prompt);
+
+        // 用户覆盖通用组为 0.9：sky 被排除。
+        var overridden = settings with
+        {
+            Thresholds = new ThresholdRules
+            {
+                UseGlobalThreshold = false,
+                GroupThresholds = new Dictionary<string, double>(StringComparer.Ordinal) { ["general"] = 0.9 },
+            },
+        };
+        var overriddenResult = PromptBuilder.Build(catalog, prediction, new TagSelection(), 0.6, overridden, groups);
+        Assert.Equal("char b", overriddenResult.Prompt);
+
+        // 全局模式：忽略模型包推荐值，仅按传入的全局阈值过滤。
+        var global = settings with { Thresholds = new ThresholdRules { UseGlobalThreshold = true } };
+        var globalResult = PromptBuilder.Build(catalog, prediction, new TagSelection(), 0.6, global, groups);
+        Assert.Equal("char b", globalResult.Prompt);
+    }
+
     private static PredictionSnapshot Snapshot(float[] probabilities) => new(
         "test-fingerprint",
         DateTimeOffset.UnixEpoch,

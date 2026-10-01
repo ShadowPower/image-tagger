@@ -295,6 +295,44 @@ public sealed class TagsViewModelTests
         Assert.False(viewModel.Groups.First(g => g.GroupId == "general").VisibleTags[0].IsExcluded);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void Group_threshold_rules_resolve_pack_defaults_and_user_overrides()
+    {
+        var groups = new GroupDescriptor[]
+        {
+            new("general", "General", "通用", DefaultThreshold: 0.2),
+            new("character", "Character", "角色", DefaultThreshold: 0.8),
+        };
+        var catalog = new TagCatalog(
+        [
+            new TagCatalogEntry(0, "sky", "天空", "general"),
+            new TagCatalogEntry(1, "char_a", "角色A", "character"),
+            new TagCatalogEntry(2, "char_b", "角色B", "character"),
+        ]);
+        var prediction = Snapshot([0.5f, 0.5f, 0.9f]);
+        var viewModel = new TagsViewModel();
+
+        // 按分组模式：通用推荐 0.2 命中，角色推荐 0.8 只命中 0.9 的项。
+        viewModel.SetInputs(catalog, prediction, 0.6, new TagSelection(), groups,
+            new ThresholdRules { UseGlobalThreshold = false });
+        Assert.Equal([0], viewModel.Groups.First(g => g.GroupId == "general").VisibleTags.Select(t => t.Index));
+        Assert.Equal([2], viewModel.Groups.First(g => g.GroupId == "character").VisibleTags.Select(t => t.Index));
+
+        // 用户覆盖角色组为 0.4：0.5 的项也可见。
+        viewModel.SetThresholdRules(new ThresholdRules
+        {
+            UseGlobalThreshold = false,
+            GroupThresholds = new Dictionary<string, double>(StringComparer.Ordinal) { ["character"] = 0.4 },
+        });
+        Assert.Equal([2, 1], viewModel.Groups.First(g => g.GroupId == "character").VisibleTags.Select(t => t.Index));
+
+        // 全局模式：模型包推荐值被忽略，仅按全局 0.6 过滤。
+        viewModel.SetThresholdRules(new ThresholdRules { UseGlobalThreshold = true });
+        Assert.Empty(viewModel.Groups.First(g => g.GroupId == "general").VisibleTags);
+        Assert.Equal([2], viewModel.Groups.First(g => g.GroupId == "character").VisibleTags.Select(t => t.Index));
+    }
+
     private static PredictionSnapshot Snapshot(float[] probabilities) => new(
         "test-fingerprint",
         DateTimeOffset.UnixEpoch,

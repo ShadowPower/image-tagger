@@ -89,7 +89,8 @@ public class ModelPackManifestGateTests
             Assert.Skip("No Model Pack manifests (Assets/Models/*/manifest.json) committed yet; " +
                         "this gate activates automatically when workflow B lands them.");
 
-        var schema = LoadEmbeddedSchema();
+        var schemaV1 = LoadEmbeddedSchema("model-pack.schema.json");
+        var schemaV2 = LoadEmbeddedSchema("model-pack.schema.v2.json");
         var failures = new List<string>();
         foreach (var manifest in manifests)
         {
@@ -99,6 +100,20 @@ public class ModelPackManifestGateTests
                 continue;
             }
             var node = JsonNode.Parse(File.ReadAllText(manifest));
+            int version = node?["schemaVersion"] is JsonValue value && value.TryGetValue<int>(out var parsed)
+                ? parsed
+                : 0;
+            var schema = version switch
+            {
+                1 => schemaV1,
+                2 => schemaV2,
+                _ => null,
+            };
+            if (schema is null)
+            {
+                failures.Add($"{manifest}: unsupported schemaVersion {version}");
+                continue;
+            }
             var result = schema.Evaluate(JsonSerializer.SerializeToElement(node!), new EvaluationOptions
             {
                 OutputFormat = OutputFormat.List,
@@ -110,11 +125,11 @@ public class ModelPackManifestGateTests
         Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));
     }
 
-    private static JsonSchema LoadEmbeddedSchema()
+    private static JsonSchema LoadEmbeddedSchema(string fileName)
     {
         var assembly = typeof(ImageTagger.Core.ModelPacks.ModelDescriptor).Assembly;
         var resourceName = assembly.GetManifestResourceNames()
-            .Single(n => n.EndsWith("model-pack.schema.json", StringComparison.Ordinal));
+            .Single(n => n.EndsWith(fileName, StringComparison.Ordinal));
         using var stream = assembly.GetManifestResourceStream(resourceName)!;
         using var reader = new StreamReader(stream);
         return JsonSchema.FromText(reader.ReadToEnd(), new BuildOptions

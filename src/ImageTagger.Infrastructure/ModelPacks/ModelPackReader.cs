@@ -41,7 +41,11 @@ public sealed class ModelPackReader
     };
     private static readonly ImageTaggerJsonContext JsonContext = new(JsonOptions);
 
-    private static readonly Lazy<JsonSchema> ManifestSchema = new(LoadManifestSchema);
+    private static readonly Lazy<JsonSchema> ManifestSchemaV1 =
+        new(() => LoadManifestSchema("model-pack.schema.json"));
+
+    private static readonly Lazy<JsonSchema> ManifestSchemaV2 =
+        new(() => LoadManifestSchema("model-pack.schema.v2.json"));
 
     public async Task<ValidatedModelPack> LoadAsync(string packRoot, CancellationToken cancellationToken)
     {
@@ -208,13 +212,34 @@ public sealed class ModelPackReader
         }
         using (document)
         {
-            var result = ManifestSchema.Value.Evaluate(document.RootElement, new EvaluationOptions
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object
+                || !root.TryGetProperty("schemaVersion", out var versionElement)
+                || !versionElement.TryGetInt32(out var version))
+            {
+                throw new ModelPackValidationException(
+                    $"model.json 不符合受支持的 schemaVersion（{ModelDescriptor.MinimumSchemaVersion}..{ModelDescriptor.MaximumSchemaVersion}）：缺少整数 schemaVersion。");
+            }
+
+            var schema = version switch
+            {
+                ModelDescriptor.MinimumSchemaVersion => ManifestSchemaV1.Value,
+                ModelDescriptor.MaximumSchemaVersion => ManifestSchemaV2.Value,
+                _ => null,
+            };
+            if (schema is null)
+            {
+                throw new ModelPackValidationException(
+                    $"model.json 不符合受支持的 schemaVersion（{ModelDescriptor.MinimumSchemaVersion}..{ModelDescriptor.MaximumSchemaVersion}），实际 {version}。");
+            }
+
+            var result = schema.Evaluate(root, new EvaluationOptions
             {
                 OutputFormat = OutputFormat.List,
                 RequireFormatValidation = true,
             });
             if (!result.IsValid)
-                throw new ModelPackValidationException("model.json 不符合受支持的 schemaVersion 1。" );
+                throw new ModelPackValidationException($"model.json 不符合 schemaVersion {version} 规范。");
         }
     }
 
@@ -331,7 +356,8 @@ public sealed class ModelPackReader
         ModelFile = dto.Model,
         Groups = dto.Groups.Select(group =>
             new ImageTagger.Core.ModelPacks.GroupDescriptor(group.Id, group.Name, group.DisplayName,
-                string.IsNullOrWhiteSpace(group.Strategy) ? "threshold" : group.Strategy)).ToArray(),
+                string.IsNullOrWhiteSpace(group.Strategy) ? "threshold" : group.Strategy,
+                group.DefaultThreshold)).ToArray(),
         Input = new ModelInputContract(
             dto.Input.Name,
             dto.Input.Layout,
@@ -362,10 +388,17 @@ public sealed class ModelPackReader
 
     private static void ValidateSemanticDescriptor(ModelDescriptor descriptor)
     {
+        if (descriptor.SchemaVersion is not (ModelDescriptor.MinimumSchemaVersion or ModelDescriptor.MaximumSchemaVersion))
+            throw new ModelPackValidationException("manifest schemaVersion 不受支持。");
+        if (descriptor.Preprocessing.SchemaVersion != descriptor.SchemaVersion)
+            throw new ModelPackValidationException("manifest schemaVersion 与 preprocessing.schemaVersion 必须一致。");
         if (descriptor.Groups.Select(group => group.Id).Distinct(StringComparer.Ordinal).Count() != descriptor.Groups.Length)
             throw new ModelPackValidationException("manifest groups 包含重复 id。");
         if (descriptor.Groups.Any(group => group.Strategy is not ("threshold" or "rating")))
             throw new ModelPackValidationException("manifest groups.strategy 不受支持。");
+        if (descriptor.Groups.Any(group => group.DefaultThreshold is { } threshold
+            && (!double.IsFinite(threshold) || threshold is < 0 or > 1)))
+            throw new ModelPackValidationException("manifest groups.defaultThreshold 范围为 0..1。");
         if (descriptor.Input.Batch is not ("dynamic" or "1"))
             throw new ModelPackValidationException("manifest input.batch 不受支持。");
         if (descriptor.Preprocessing.OrderedSteps.Count(step => step.Op == "decode") != 1
@@ -385,11 +418,11 @@ public sealed class ModelPackReader
         _ => throw new ModelPackValidationException("预处理参数只能是标量或数组。"),
     };
 
-    private static JsonSchema LoadManifestSchema()
+    private static JsonSchema LoadManifestSchema(string fileName)
     {
         var assembly = typeof(ModelDescriptor).Assembly;
         var resourceName = assembly.GetManifestResourceNames()
-            .Single(name => name.EndsWith("model-pack.schema.json", StringComparison.Ordinal));
+            .Single(name => name.EndsWith(fileName, StringComparison.Ordinal));
         using var stream = assembly.GetManifestResourceStream(resourceName)
             ?? throw new InvalidOperationException("Embedded Model Pack schema is missing.");
         using var reader = new StreamReader(stream, Encoding.UTF8);
@@ -415,7 +448,12 @@ public sealed class ModelPackReader
         public Dictionary<string, JsonElement>? Build { get; init; }
     }
 
-    internal sealed record GroupDto(string Id, string Name, string DisplayName, string? Strategy);
+    internal sealed record GroupDto(
+        string Id,
+        string Name,
+        string DisplayName,
+        string? Strategy = null,
+        double? DefaultThreshold = null);
 
     internal sealed record InputDto(
         string Name,

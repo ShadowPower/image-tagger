@@ -3,7 +3,16 @@ namespace ImageTagger.Core.ModelPacks;
 /// <summary>Runtime view of a validated Model Pack manifest (model.json, design 3.4).</summary>
 public sealed record ModelDescriptor
 {
-    public const int CurrentSchemaVersion = 1;
+    /// <summary>Lowest Model Pack schema version this app accepts (design 3.4).</summary>
+    public const int MinimumSchemaVersion = 1;
+
+    /// <summary>
+    /// Highest Model Pack schema version this app accepts. Version 2 adds the generic
+    /// <c>resize-fit</c>/<c>pad-to-size</c> preprocessing operators, the
+    /// <c>pillow-bilinear-v1</c> sampler and optional per-group default thresholds;
+    /// version 1 manifests stay fully supported and unchanged.
+    /// </summary>
+    public const int MaximumSchemaVersion = 2;
 
     public required int SchemaVersion { get; init; }
 
@@ -37,11 +46,18 @@ public sealed record ModelDescriptor
 }
 
 /// <summary>A tag group declared by the pack; packs fully own their group taxonomy.</summary>
+/// <param name="DefaultThreshold">
+/// Optional pack-recommended threshold for this group (schemaVersion 2). When present it is
+/// the per-group fallback used while the user keeps per-group thresholds enabled; user
+/// overrides in prompt settings always win. Packs without the field keep the single
+/// <see cref="ModelDescriptor.DefaultThreshold"/> behavior.
+/// </param>
 public sealed record GroupDescriptor(
     string Id,
     string Name,
     string DisplayName,
-    string Strategy = "threshold");
+    string Strategy = "threshold",
+    double? DefaultThreshold = null);
 
 public sealed record ModelInputContract(
     string Name,

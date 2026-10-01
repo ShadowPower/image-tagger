@@ -1,6 +1,7 @@
 using ImageTagger.App.ViewModels;
 using ImageTagger.Core.Domain;
 using ImageTagger.Core.Fakes;
+using ImageTagger.Core.ModelPacks;
 using ImageTagger.Core.Prompt;
 using ImageTagger.Core.Services;
 using ImageTagger.Tests.TestInfrastructure;
@@ -127,6 +128,30 @@ public sealed class MainViewModelCompositionTests
             0.5);
 
         Assert.Equal(50, viewModel.ThresholdPercent);
+    }
+
+    [Fact]
+    public void Pack_group_thresholds_seed_default_rules_until_user_customizes()
+    {
+        var groups = new GroupDescriptor[]
+        {
+            new("general", "General", "通用", DefaultThreshold: 0.2),
+            new("character", "Character", "角色", DefaultThreshold: 0.8),
+        };
+
+        // 未自定义（工厂默认）时用模型包推荐值播种：进入按分组阈值模式。
+        var seeded = new MainViewModel();
+        seeded.SetModelContext(FakeModelPack.Catalog(), groups, PromptSettingsFactory.CreateDefault(), 0.5);
+        Assert.False(seeded.CurrentPromptSettings.Thresholds.UseGlobalThreshold);
+
+        // 已有用户配置（分组规则非空）时保持用户设置不变。
+        var configured = PromptSettingsFactory.CreateDefault() with
+        {
+            GroupRules = [new GroupRule { GroupId = "general" }],
+        };
+        var preserved = new MainViewModel();
+        preserved.SetModelContext(FakeModelPack.Catalog(), groups, configured, 0.5);
+        Assert.True(preserved.CurrentPromptSettings.Thresholds.UseGlobalThreshold);
     }
 
     private static string TempImagePath(string name) => Path.Combine(Path.GetTempPath(), name);

@@ -377,6 +377,20 @@
   - [x] 覆盖 schema、路径、hash、catalog、类型链、shape 和取消。
   - [x] 固定图片预处理性能和分配量形成可比较基线。
 
+- [x] `B-08` 支持通用等比缩放、任意尺寸补边与分组推荐阈值（schemaVersion 2）。
+
+  依赖：`B-03`、`B-04`、`B-05`。
+
+  工作内容：在 v1 算子集之上增加 `resize-fit`（等比缩放到目标框，`rounding` floor/round）、`pad-to-size`（任意目标尺寸 + 锚点 + 背景色）和 `pillow-bilinear-v1` 采样器；新增 schemaVersion 2 校验文件（v1 文件与行为原样保留）；模型包可为每个分组声明推荐阈值。
+
+  验收：
+
+  - [x] 12 个 v1 算子、v1 manifest 与既有 WD Canary 包行为不变（真实包端到端复验通过）。
+  - [x] 新算子的参数 schema、类型链、静态形状收敛（未知维必须由后续 pad/crop/resize 收敛）与执行均有单元测试。
+  - [x] 新算子/采样器/分组阈值在 v1 中、未知版本在两者中均被明确拒绝。
+  - [x] Pillow BILINEAR 与 fit+pad 组合有逐位 golden 对照（`ResizeFitGoldenTests` + `tools/golden/export_golden_fit.py`）。
+  - [x] 分组阈值按“用户覆盖 > 模型包推荐值 > 全局阈值”解析；未声明推荐值的模型包行为与首版一致。
+
 ### 工作流 C：推理运行时、硬件加速与批处理
 
 - [x] `C-01` 实现通用 Session 生命周期和运行时抽象。
@@ -957,6 +971,7 @@
 | 图片导入、缩略图、列表和切图 | `A-01`–`A-05` | `U-02`、`U-07` |
 | 内置模型与简单 Model Pack | `P-04`、`B-01`、`B-02` | `U-03`、`U-09`、`U-10` |
 | 多模型与动态预处理顺序/参数 | `P-06`、`B-03`–`B-05` | `B-07`、`U-03` |
+| 通用等比缩放/任意尺寸补边/分组推荐阈值（schemaVersion 2） | `B-08` | `B-08`、`ResizeFitGoldenTests` |
 | 精确 WD 预处理 | `P-05`、`B-05` | `U-03` |
 | Windows ML | `C-02`、`C-05` | `U-04`、`U-09` |
 | macOS CoreML/CPU | `C-03`、`C-05` | `U-05`、`U-10` |

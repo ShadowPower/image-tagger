@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ImageTagger.Core.Domain;
 using ImageTagger.Core.ModelPacks;
+using ImageTagger.Core.Prompt;
 
 namespace ImageTagger.App.ViewModels;
 
@@ -83,6 +84,9 @@ public sealed partial class TagsViewModel : ObservableObject
     private PredictionSnapshot? _prediction;
     private TagSelection _selection = new();
     private IReadOnlyList<GroupDescriptor>? _manifestGroups;
+    private Dictionary<string, GroupDescriptor> _groupById = new(StringComparer.Ordinal);
+    private ThresholdRules? _thresholdRules;
+    private string _thresholdRulesKey = "<none>";
 
     private double _threshold = DefaultThresholdValue;
 
@@ -138,12 +142,16 @@ public sealed partial class TagsViewModel : ObservableObject
     public TagSelection Selection => _selection;
 
     /// <summary>设置全部输入并同步重算（阈值变化不重跑模型，仅重算投影）。</summary>
+    /// <param name="thresholdRules">
+    /// 分组阈值解析规则（用户覆盖与模型包推荐值）；为空时所有分组只使用全局阈值。
+    /// </param>
     public void SetInputs(
         TagCatalog? catalog,
         PredictionSnapshot? prediction,
         double threshold,
         TagSelection? selection,
-        IReadOnlyList<GroupDescriptor>? manifestGroups)
+        IReadOnlyList<GroupDescriptor>? manifestGroups,
+        ThresholdRules? thresholdRules = null)
     {
         if (!double.IsFinite(threshold) || threshold is < 0 or > 1)
             throw new ArgumentOutOfRangeException(nameof(threshold));
@@ -151,8 +159,22 @@ public sealed partial class TagsViewModel : ObservableObject
         _prediction = prediction;
         _selection = selection ?? new TagSelection();
         _manifestGroups = manifestGroups;
+        _groupById = BuildGroupLookup(manifestGroups);
+        _thresholdRules = thresholdRules;
+        _thresholdRulesKey = ThresholdRulesKey(thresholdRules);
         // 直接写字段后一次性重算，避免中间状态触发多次重算。
         SetProperty(ref _threshold, threshold, nameof(Threshold));
+        Rebuild();
+    }
+
+    /// <summary>仅更新分组阈值规则；有效阈值组合未变化时不重算投影。</summary>
+    public void SetThresholdRules(ThresholdRules? rules)
+    {
+        var key = ThresholdRulesKey(rules);
+        if (string.Equals(key, _thresholdRulesKey, StringComparison.Ordinal))
+            return;
+        _thresholdRules = rules;
+        _thresholdRulesKey = key;
         Rebuild();
     }
 
@@ -255,7 +277,7 @@ public sealed partial class TagsViewModel : ObservableObject
             }
             else
             {
-                items = BuildThresholdItems(catalog, probabilities, groupId, _threshold);
+                items = BuildThresholdItems(catalog, probabilities, groupId, EffectiveThreshold(groupId));
             }
             hits += items.Count;
             Groups.Add(new TagGroupViewModel(groupId, displayName, items));
@@ -267,6 +289,40 @@ public sealed partial class TagsViewModel : ObservableObject
         Runtime = _prediction.Runtime ?? string.Empty;
         Provider = _prediction.ExecutionProvider ?? string.Empty;
         Device = _prediction.ExecutionProvider ?? string.Empty;
+    }
+
+    private double EffectiveThreshold(string groupId) =>
+        GroupThresholdResolver.Resolve(_thresholdRules, LookupGroup(groupId), _threshold);
+
+    private GroupDescriptor? LookupGroup(string groupId) =>
+        string.IsNullOrEmpty(groupId) || !_groupById.TryGetValue(groupId, out var group) ? null : group;
+
+    private static Dictionary<string, GroupDescriptor> BuildGroupLookup(IReadOnlyList<GroupDescriptor>? manifestGroups)
+    {
+        var map = new Dictionary<string, GroupDescriptor>(StringComparer.Ordinal);
+        if (manifestGroups is null)
+            return map;
+        foreach (var group in manifestGroups)
+        {
+            if (group is null || string.IsNullOrEmpty(group.Id))
+                continue;
+            map.TryAdd(group.Id, group);
+        }
+        return map;
+    }
+
+    /// <summary>规范化阈值规则内容，用于免重算变更检测（顺序无关）。</summary>
+    private static string ThresholdRulesKey(ThresholdRules? rules)
+    {
+        if (rules is null)
+            return "<none>";
+        var builder = new System.Text.StringBuilder(rules.UseGlobalThreshold ? "global" : "group");
+        foreach (var pair in rules.GroupThresholds.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+        {
+            builder.Append('|').Append(pair.Key).Append('=')
+                .Append(pair.Value.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+        }
+        return builder.ToString();
     }
 
     private static List<(string GroupId, string DisplayName, string Strategy)> ResolveGroupOrder(

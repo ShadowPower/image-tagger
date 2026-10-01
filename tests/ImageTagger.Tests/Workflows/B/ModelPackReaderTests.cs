@@ -164,7 +164,44 @@ public sealed class ModelPackReaderTests
         Assert.Equal(11, compiled.Operators.Count);
     }
 
-    internal static string CreatePack(TempDirectory temp)
+    [Fact]
+    public async Task Loads_v2_pack_with_group_thresholds_and_generic_geometry()
+    {
+        using var temp = new TempDirectory("pack-v2");
+        var root = CreatePack(temp, schemaVersion: 2);
+        var pack = await new ModelPackReader().LoadAsync(root, TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, pack.Descriptor.SchemaVersion);
+        Assert.Equal(0.27, pack.Descriptor.Groups[0].DefaultThreshold);
+        Assert.Null(pack.Descriptor.Groups[1].DefaultThreshold);
+
+        var compiled = new PreprocessingPipelineCompiler().ValidateAndCompile(
+            pack.Descriptor.Preprocessing,
+            new ModelInputTensor
+            {
+                DType = TensorDType.Float32,
+                Layout = pack.Descriptor.Input.Layout,
+                Shape = [3, pack.Descriptor.Input.Height, pack.Descriptor.Input.Width],
+            });
+        Assert.Equal(
+            ["decode", "ensure-color", "alpha-composite", "resize-fit", "pad-to-size", "cast", "permute"],
+            compiled.Steps.Select(step => step.Op));
+    }
+
+    [Fact]
+    public async Task Rejects_v2_root_with_v1_preprocessing_version()
+    {
+        using var temp = new TempDirectory("pack-v2-mismatch");
+        var root = CreatePack(temp, schemaVersion: 2);
+        MutateManifest(root, node => node["preprocessing"]!["schemaVersion"] = 1);
+
+        var exception = await Assert.ThrowsAsync<ModelPackValidationException>(
+            () => new ModelPackReader().LoadAsync(root, TestContext.Current.CancellationToken));
+
+        Assert.Contains("schemaVersion 2", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    internal static string CreatePack(TempDirectory temp, int schemaVersion = 1)
     {
         var root = temp.CreateSubdirectory("test-pack");
         File.WriteAllBytes(Path.Combine(root, "model.onnx"), [1, 2, 3, 4]);
@@ -172,7 +209,14 @@ public sealed class ModelPackReaderTests
         File.WriteAllText(Path.Combine(root, "tags.csv"),
             "id,name,group,translation,count\n0,tag_one,subject,标签一,1\n1,tag_two,subject,,2\n",
             new UTF8Encoding(false));
-        File.WriteAllText(Path.Combine(root, "model.json"), """
+        File.WriteAllText(Path.Combine(root, "model.json"),
+            schemaVersion == 2 ? V2Manifest : V1Manifest,
+            new UTF8Encoding(false));
+        WriteChecksums(root);
+        return root;
+    }
+
+    private const string V1Manifest = """
             {
               "schemaVersion": 1,
               "id": "test-pack",
@@ -194,10 +238,37 @@ public sealed class ModelPackReaderTests
               "catalog": "tags.csv",
               "defaultThreshold": 0.5
             }
-            """, new UTF8Encoding(false));
-        WriteChecksums(root);
-        return root;
-    }
+            """;
+
+    private const string V2Manifest = """
+            {
+              "schemaVersion": 2,
+              "id": "test-pack",
+              "displayName": "Test Pack",
+              "task": "multi-label-image-tagging",
+              "model": "model.onnx",
+              "groups": [
+                { "id": "subject", "name": "Subject", "displayName": "主体", "defaultThreshold": 0.27 },
+                { "id": "style", "name": "Style", "displayName": "风格" }
+              ],
+              "input": { "name": "images", "layout": "NCHW", "dtype": "float32", "batch": "dynamic", "width": 64, "height": 64 },
+              "preprocessing": {
+                "schemaVersion": 2,
+                "steps": [
+                  { "op": "decode", "version": 1, "frame": "first", "colorManagement": "ignore" },
+                  { "op": "ensure-color", "version": 1, "mode": "rgb-or-rgba-if-transparent" },
+                  { "op": "alpha-composite", "version": 1, "when": "has-alpha", "background": [255, 255, 255] },
+                  { "op": "resize-fit", "version": 1, "width": 64, "height": 64, "sampler": "pillow-bilinear-v1", "rounding": "floor" },
+                  { "op": "pad-to-size", "version": 1, "width": 64, "height": 64, "anchor": "floor-center", "background": [0, 0, 0] },
+                  { "op": "cast", "version": 1, "dtype": "float32" },
+                  { "op": "permute", "version": 1, "order": [2, 0, 1] }
+                ]
+              },
+              "output": { "name": "logits", "activation": "sigmoid", "labelCount": 2 },
+              "catalog": "tags.csv",
+              "defaultThreshold": 0.5
+            }
+            """;
 
     private static void MutateManifest(string root, Action<JsonObject> mutate)
     {

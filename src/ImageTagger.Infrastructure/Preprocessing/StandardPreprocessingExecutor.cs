@@ -68,9 +68,17 @@ public sealed class StandardPreprocessingExecutor : IPreprocessingExecutor
                     case "pad-to-square":
                         image = Replace(image, Pad(RequireRgb(image, step.Op), ByteTriplet(p["background"])));
                         break;
+                    case "pad-to-size":
+                        image = Replace(image, PadToSize(RequireRgb(image, step.Op),
+                            Int(p["width"]), Int(p["height"]), String(p["anchor"]), ByteTriplet(p["background"])));
+                        break;
                     case "resize":
                         image = Replace(image, Resize(RequireRgb(image, step.Op),
                             Int(p["width"]), Int(p["height"]), String(p["sampler"])));
+                        break;
+                    case "resize-fit":
+                        image = Replace(image, ResizeFit(RequireRgb(image, step.Op),
+                            Int(p["width"]), Int(p["height"]), String(p["sampler"]), String(p["rounding"])));
                         break;
                     case "crop":
                         image = Replace(image, ImageSharpImageOperations.CenterCrop(
@@ -144,12 +152,23 @@ public sealed class StandardPreprocessingExecutor : IPreprocessingExecutor
         return transparent;
     }
 
-    private static Image<Rgb24> Pad(Image<Rgb24> source, byte[] background)
+    private static Image<Rgb24> Pad(Image<Rgb24> source, byte[] background) =>
+        PadToSize(
+            source,
+            Math.Max(source.Width, source.Height),
+            Math.Max(source.Width, source.Height),
+            anchor: "floor-center",
+            background);
+
+    private static Image<Rgb24> PadToSize(Image<Rgb24> source, int width, int height, string anchor, byte[] background)
     {
-        var side = Math.Max(source.Width, source.Height);
-        var result = new Image<Rgb24>(side, side, new Rgb24(background[0], background[1], background[2]));
-        var ox = (side - source.Width) / 2;
-        var oy = (side - source.Height) / 2;
+        if (width < source.Width || height < source.Height)
+            throw new TaggerException(TaggerErrorCode.ModelPackInvalid,
+                $"pad-to-size 目标 {width}x{height} 小于图像 {source.Width}x{source.Height}。");
+        // floor-center 与首版 pad-to-square 语义一致（左/上偏移向下取整）；center 为四舍五入偏移。
+        var ox = anchor == "center" ? (width - source.Width + 1) / 2 : (width - source.Width) / 2;
+        var oy = anchor == "center" ? (height - source.Height + 1) / 2 : (height - source.Height) / 2;
+        var result = new Image<Rgb24>(width, height, new Rgb24(background[0], background[1], background[2]));
         source.ProcessPixelRows(result, (src, dst) =>
         {
             for (var y = 0; y < src.Height; y++)
@@ -158,18 +177,27 @@ public sealed class StandardPreprocessingExecutor : IPreprocessingExecutor
         return result;
     }
 
-    private static Image<Rgb24> Resize(Image<Rgb24> source, int width, int height, string sampler)
+    private static Image<Rgb24> ResizeFit(
+        Image<Rgb24> source, int boxWidth, int boxHeight, string sampler, string rounding)
     {
-        if (sampler == "pillow-bicubic-v1")
-        {
-            var input = new byte[source.Width * source.Height * 3];
-            source.CopyPixelDataTo(input);
-            var output = new byte[width * height * 3];
-            PillowBicubicResampler.ResizeRgb(input, source.Width, source.Height, output, width, height);
-            var result = Image.LoadPixelData<Rgb24>(output, width, height);
-            return result;
-        }
-        return ImageSharpImageOperations.ResizeBicubic(source, width, height);
+        var (width, height) = ResizeFitGeometry.Fit(source.Width, source.Height, boxWidth, boxHeight, rounding);
+        return Resize(source, width, height, sampler);
+    }
+
+    private static Image<Rgb24> Resize(Image<Rgb24> source, int width, int height, string sampler) => sampler switch
+    {
+        "pillow-bicubic-v1" => ResizePillow(source, width, height, PillowResampleFilter.Bicubic),
+        "pillow-bilinear-v1" => ResizePillow(source, width, height, PillowResampleFilter.Bilinear),
+        _ => ImageSharpImageOperations.ResizeBicubic(source, width, height),
+    };
+
+    private static Image<Rgb24> ResizePillow(Image<Rgb24> source, int width, int height, PillowResampleFilter filter)
+    {
+        var input = new byte[source.Width * source.Height * 3];
+        source.CopyPixelDataTo(input);
+        var output = new byte[width * height * 3];
+        PillowFixedPointResampler.ResizeRgb(input, source.Width, source.Height, output, width, height, filter);
+        return Image.LoadPixelData<Rgb24>(output, width, height);
     }
 
     private static Image<Rgb24> Reorder(Image<Rgb24> source, int[] order)

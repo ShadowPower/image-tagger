@@ -21,9 +21,13 @@ public sealed class StandardPreprocessOperatorFactory : IPreprocessOperatorFacto
     public static IReadOnlyList<string> AllOperatorNames { get; } =
     [
         "decode", "exif-transpose", "ensure-color", "alpha-composite",
-        "pad-to-square", "resize", "crop", "reorder-channels", "cast",
+        "pad-to-square", "pad-to-size", "resize", "resize-fit", "crop", "reorder-channels", "cast",
         "divide", "normalize", "permute",
     ];
+
+    /// <summary>Closed sampler identifier set accepted by resize-family operators (schemaVersion 2).</summary>
+    private static readonly string[] Samplers =
+        ["pillow-bicubic-v1", "pillow-bilinear-v1", "imagesharp-bicubic-v1"];
 
     public string Op { get; }
 
@@ -56,11 +60,25 @@ public sealed class StandardPreprocessOperatorFactory : IPreprocessOperatorFacto
                 RequireString(parameters, "anchor", "floor-center");
                 RequireByteTriplet(parameters, "background");
                 break;
+            case "pad-to-size":
+                RequireKeys(parameters, "width", "height", "anchor", "background");
+                RequireDimension(parameters, "width");
+                RequireDimension(parameters, "height");
+                RequireString(parameters, "anchor", "floor-center", "center");
+                RequireByteTriplet(parameters, "background");
+                break;
             case "resize":
                 RequireKeys(parameters, "width", "height", "sampler");
                 RequireDimension(parameters, "width");
                 RequireDimension(parameters, "height");
-                RequireString(parameters, "sampler", "pillow-bicubic-v1", "imagesharp-bicubic-v1");
+                RequireString(parameters, "sampler", Samplers);
+                break;
+            case "resize-fit":
+                RequireKeys(parameters, "width", "height", "sampler", "rounding");
+                RequireDimension(parameters, "width");
+                RequireDimension(parameters, "height");
+                RequireString(parameters, "sampler", Samplers);
+                RequireString(parameters, "rounding", "floor", "round");
                 break;
             case "crop":
                 RequireKeys(parameters, "width", "height", "anchor");
@@ -109,7 +127,7 @@ public sealed class StandardPreprocessOperatorFactory : IPreprocessOperatorFacto
                 (TensorKind.Image, TensorKind.RgbImage),
             "ensure-color" => (TensorKind.Image, TensorKind.Image),
             "alpha-composite" => (TensorKind.Image, TensorKind.RgbImage),
-            "pad-to-square" or "resize" or "crop" or "reorder-channels" =>
+            "pad-to-square" or "pad-to-size" or "resize" or "resize-fit" or "crop" or "reorder-channels" =>
                 (TensorKind.RgbImage, TensorKind.RgbImage),
             "cast" => (TensorKind.RgbImage, TensorKind.FloatTensor),
             "divide" or "normalize" or "permute" =>
@@ -132,7 +150,9 @@ public sealed class StandardPreprocessOperatorFactory : IPreprocessOperatorFacto
             "alpha-composite" => (input.Width, input.Height, 3),
             "pad-to-square" =>
                 (Math.Max(input.Width, input.Height), Math.Max(input.Width, input.Height), input.Channels),
+            "pad-to-size" => InferPadToSizeShape(input, parameters),
             "resize" => (GetInt(parameters, "width"), GetInt(parameters, "height"), input.Channels),
+            "resize-fit" => InferResizeFitShape(input, parameters),
             "crop" => InferCrop(input, parameters),
             "reorder-channels" => (input.Width, input.Height, 3),
             _ => input,
@@ -143,6 +163,32 @@ public sealed class StandardPreprocessOperatorFactory : IPreprocessOperatorFacto
     {
         ValidateParameters(parameters);
         return new DeclaredOperator(Op);
+    }
+
+    /// <summary>pad-to-size：目标尺寸静态可知；输入已知时必须能容纳源图，否则直接拒绝。</summary>
+    private static (int Width, int Height, int Channels) InferPadToSizeShape(
+        (int Width, int Height, int Channels) input,
+        IReadOnlyDictionary<string, object?> parameters)
+    {
+        var width = GetInt(parameters, "width");
+        var height = GetInt(parameters, "height");
+        if (input.Width > 0 && input.Height > 0 && (width < input.Width || height < input.Height))
+            throw CreateInvalid("pad-to-size target is smaller than the input image");
+        return (width, height, input.Channels);
+    }
+
+    /// <summary>resize-fit：输出依赖输入长宽比；输入未知时保持未知（后续 pad/crop/resize 收敛形状）。</summary>
+    private static (int Width, int Height, int Channels) InferResizeFitShape(
+        (int Width, int Height, int Channels) input,
+        IReadOnlyDictionary<string, object?> parameters)
+    {
+        var boxWidth = GetInt(parameters, "width");
+        var boxHeight = GetInt(parameters, "height");
+        if (input.Width <= 0 || input.Height <= 0)
+            return (0, 0, input.Channels);
+        var (width, height) = ResizeFitGeometry.Fit(
+            input.Width, input.Height, boxWidth, boxHeight, GetString(parameters, "rounding"));
+        return (width, height, input.Channels);
     }
 
     private static (int Width, int Height, int Channels) InferCrop(
@@ -224,6 +270,9 @@ public sealed class StandardPreprocessOperatorFactory : IPreprocessOperatorFacto
 
     private static int GetInt(IReadOnlyDictionary<string, object?> parameters, string name) =>
         checked((int)ToNumber(parameters[name]));
+
+    private static string GetString(IReadOnlyDictionary<string, object?> parameters, string name) =>
+        parameters[name] as string ?? throw CreateInvalid($"{name} must be a string");
 
     private void Invalid(string reason) => throw CreateInvalid($"operator '{Op}': {reason}");
 

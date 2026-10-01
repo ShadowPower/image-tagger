@@ -236,7 +236,9 @@ public static class ValidateCommand
 
     private static void ValidateManifest(ModelManifest m, string root, List<string> errors)
     {
-        if (m.SchemaVersion != 1) errors.Add($"unsupported schemaVersion {m.SchemaVersion}");
+        if (m.SchemaVersion is not (ImageTagger.Core.ModelPacks.ModelDescriptor.MinimumSchemaVersion
+            or ImageTagger.Core.ModelPacks.ModelDescriptor.MaximumSchemaVersion))
+            errors.Add($"unsupported schemaVersion {m.SchemaVersion}");
         if (string.IsNullOrWhiteSpace(m.Id)) errors.Add("manifest id empty");
         else if (m.Id.Any(c => !char.IsAsciiLetterOrDigit(c) && c != '-'))
             errors.Add($"manifest id has invalid characters: {m.Id}");

@@ -61,12 +61,12 @@ public static class PromptBuilder
             : new HashSet<string>(settings.Transforms.ExcludedTags, StringComparer.Ordinal);
 
         // 按组收集候选（第 2/3/4/5 步），保留概率与有效阈值供后续权重使用。
+        var groupById = BuildGroupLookup(manifestGroups);
         var perGroupCandidates = new List<GroupCandidates>(orderedGroups.Count);
         foreach (var group in orderedGroups)
         {
-            double effective = settings.Thresholds.UseGlobalThreshold
-                ? defaultThreshold
-                : settings.Thresholds.Effective(defaultThreshold, group.GroupId);
+            groupById.TryGetValue(group.GroupId, out var manifestGroup);
+            double effective = GroupThresholdResolver.Resolve(settings.Thresholds, manifestGroup, defaultThreshold);
             if (!double.IsFinite(effective) || effective is < 0 or > 1)
                 continue;
 
@@ -198,6 +198,21 @@ public static class PromptBuilder
     private sealed record GroupRawTexts(string GroupId, double EffectiveThreshold, List<WeightedCandidate> Texts);
 
     private sealed record GroupTexts(string GroupId, double EffectiveThreshold, List<string> Texts);
+
+    /// <summary>按分组标识查找 manifest 声明（重复标识保留首个）；用于解析分组推荐阈值。</summary>
+    private static Dictionary<string, GroupDescriptor> BuildGroupLookup(IReadOnlyList<GroupDescriptor>? manifestGroups)
+    {
+        var map = new Dictionary<string, GroupDescriptor>(StringComparer.Ordinal);
+        if (manifestGroups is null)
+            return map;
+        foreach (var group in manifestGroups)
+        {
+            if (group is null || string.IsNullOrEmpty(group.Id))
+                continue;
+            map.TryAdd(group.Id, group);
+        }
+        return map;
+    }
 
     private static List<OrderedGroup> ResolveOrderedGroups(
         PromptSettings settings,

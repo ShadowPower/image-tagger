@@ -13,6 +13,11 @@ namespace ImageTagger.Infrastructure.Preprocessing;
 public sealed class PreprocessingPipelineCompiler : IPreprocessingPipelineCompiler
 {
     private const int ImplementationVersion = 1;
+
+    /// <summary>Operators that require preprocessing schemaVersion 2 (manifest schema is the normative gate).</summary>
+    private static readonly HashSet<string> SchemaVersionTwoOperators =
+        new(StringComparer.Ordinal) { "pad-to-size", "resize-fit" };
+
     private readonly IReadOnlyDictionary<string, IPreprocessOperatorFactory> _factories;
     private readonly ConcurrentDictionary<string, Lazy<CompiledPreprocessingPipeline>> _cache =
         new(StringComparer.Ordinal);
@@ -43,7 +48,7 @@ public sealed class PreprocessingPipelineCompiler : IPreprocessingPipelineCompil
     {
         ArgumentNullException.ThrowIfNull(descriptor);
         ArgumentNullException.ThrowIfNull(modelInput);
-        if (descriptor.SchemaVersion != 1)
+        if (descriptor.SchemaVersion is not (ModelDescriptor.MinimumSchemaVersion or ModelDescriptor.MaximumSchemaVersion))
             Invalid($"unsupported preprocessing schemaVersion {descriptor.SchemaVersion}");
         if (descriptor.OrderedSteps is not { Length: > 0 and <= 32 })
             Invalid("pipeline must contain 1 to 32 steps");
@@ -88,6 +93,9 @@ public sealed class PreprocessingPipelineCompiler : IPreprocessingPipelineCompil
                 Invalid($"unknown preprocessing operator '{step.Op}'");
             if (!factory.SupportedVersions.Contains(step.Version))
                 Invalid($"operator '{step.Op}' does not support version {step.Version}");
+            if (descriptor.SchemaVersion == ModelDescriptor.MinimumSchemaVersion
+                && SchemaVersionTwoOperators.Contains(step.Op))
+                Invalid($"operator '{step.Op}' requires preprocessing schemaVersion {ModelDescriptor.MaximumSchemaVersion}");
             factory.ValidateParameters(step.Parameters);
             var kinds = factory.GetKinds(step.Parameters);
             if (kinds.Input != currentKind)

@@ -12,17 +12,18 @@ namespace ImageTagger.Tests.Contracts;
 /// </summary>
 public class ModelPackSchemaTests
 {
-    private static readonly JsonSchema Schema = LoadEmbeddedSchema();
+    private static readonly JsonSchema SchemaV1 = LoadEmbeddedSchema("model-pack.schema.json");
+    private static readonly JsonSchema SchemaV2 = LoadEmbeddedSchema("model-pack.schema.v2.json");
 
     private readonly ITestOutputHelper _output;
 
     public ModelPackSchemaTests(ITestOutputHelper output) => _output = output;
 
-    private static JsonSchema LoadEmbeddedSchema()
+    private static JsonSchema LoadEmbeddedSchema(string fileName)
     {
         var assembly = typeof(ImageTagger.Core.ModelPacks.ModelDescriptor).Assembly;
         var resourceName = assembly.GetManifestResourceNames()
-            .Single(n => n.EndsWith("model-pack.schema.json", StringComparison.Ordinal))
+            .Single(n => n.EndsWith(fileName, StringComparison.Ordinal))
             ?? throw new InvalidOperationException("schema resource not found");
         using var stream = assembly.GetManifestResourceStream(resourceName)!;
         using var reader = new StreamReader(stream);
@@ -70,9 +71,9 @@ public class ModelPackSchemaTests
                     yield return nested;
     }
 
-    private void AssertValid(JsonNode node)
+    private void AssertValid(JsonNode node, JsonSchema? schema = null)
     {
-        var result = Schema.Evaluate(JsonSerializer.SerializeToElement(node), new EvaluationOptions
+        var result = (schema ?? SchemaV1).Evaluate(JsonSerializer.SerializeToElement(node), new EvaluationOptions
         {
             OutputFormat = OutputFormat.List,
             RequireFormatValidation = true,
@@ -82,9 +83,9 @@ public class ModelPackSchemaTests
         Assert.True(result.IsValid, "manifest should validate");
     }
 
-    private void AssertInvalid(JsonNode node, string expectFragment)
+    private void AssertInvalid(JsonNode node, string expectFragment, JsonSchema? schema = null)
     {
-        var result = Schema.Evaluate(JsonSerializer.SerializeToElement(node), new EvaluationOptions
+        var result = (schema ?? SchemaV1).Evaluate(JsonSerializer.SerializeToElement(node), new EvaluationOptions
         {
             OutputFormat = OutputFormat.List,
             RequireFormatValidation = true,
@@ -110,7 +111,7 @@ public class ModelPackSchemaTests
     public void Rejects_unknown_schema_version()
     {
         var node = ValidManifest();
-        node["schemaVersion"] = 2;
+        node["schemaVersion"] = 3;
         AssertInvalid(node, "unknown schemaVersion");
     }
 
@@ -200,5 +201,55 @@ public class ModelPackSchemaTests
         node["preprocessing"]!["steps"]![1] = JsonNode.Parse(
             """{ "op": "crop", "version": 1, "width": 32, "height": 32, "anchor": "center" }""");
         AssertValid(node);
+    }
+
+    /// <summary>v2 manifest: generic geometry operators, bilinear sampler and per-group default thresholds.</summary>
+    private static JsonNode ValidManifestV2()
+    {
+        var node = ValidManifest();
+        node["schemaVersion"] = 2;
+        node["preprocessing"]!["schemaVersion"] = 2;
+        node["groups"]![0]!["defaultThreshold"] = 0.27;
+        node["preprocessing"]!["steps"]![1] = JsonNode.Parse(
+            """{ "op": "resize-fit", "version": 1, "width": 64, "height": 64, "sampler": "pillow-bilinear-v1", "rounding": "floor" }""");
+        Assert.IsType<JsonArray>(node["preprocessing"]!["steps"]).Add(JsonNode.Parse(
+            """{ "op": "pad-to-size", "version": 1, "width": 64, "height": 64, "anchor": "floor-center", "background": [0, 0, 0] }"""));
+        return node;
+    }
+
+    [Fact]
+    public void Accepts_v2_manifest_with_generic_geometry_and_group_thresholds() =>
+        AssertValid(ValidManifestV2(), SchemaV2);
+
+    [Fact]
+    public void V1_schema_rejects_v2_operators_and_group_thresholds()
+    {
+        var withFit = ValidManifest();
+        withFit["preprocessing"]!["steps"]![1] = JsonNode.Parse(
+            """{ "op": "resize-fit", "version": 1, "width": 64, "height": 64, "sampler": "pillow-bilinear-v1", "rounding": "floor" }""");
+        AssertInvalid(withFit, "v2 operator in v1 pipeline");
+
+        var withBilinear = ValidManifest();
+        withBilinear["preprocessing"]!["steps"]![1] = JsonNode.Parse(
+            """{ "op": "resize", "version": 1, "width": 64, "height": 64, "sampler": "pillow-bilinear-v1" }""");
+        AssertInvalid(withBilinear, "v2 sampler in v1 pipeline");
+
+        var withGroupThreshold = ValidManifest();
+        withGroupThreshold["groups"]![0]!["defaultThreshold"] = 0.27;
+        AssertInvalid(withGroupThreshold, "group defaultThreshold in v1");
+    }
+
+    [Fact]
+    public void V2_schema_rejects_missing_rounding_unknown_anchor_and_smaller_targets()
+    {
+        var missingRounding = ValidManifestV2();
+        Assert.IsType<JsonArray>(missingRounding["preprocessing"]!["steps"])[1] = JsonNode.Parse(
+            """{ "op": "resize-fit", "version": 1, "width": 64, "height": 64, "sampler": "pillow-bilinear-v1" }""");
+        AssertInvalid(missingRounding, "resize-fit missing rounding", SchemaV2);
+
+        var badAnchor = ValidManifestV2();
+        Assert.IsType<JsonArray>(badAnchor["preprocessing"]!["steps"])[2] = JsonNode.Parse(
+            """{ "op": "pad-to-size", "version": 1, "width": 64, "height": 64, "anchor": "top-left", "background": [0, 0, 0] }""");
+        AssertInvalid(badAnchor, "pad-to-size anchor", SchemaV2);
     }
 }

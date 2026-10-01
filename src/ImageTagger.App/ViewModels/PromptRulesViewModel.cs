@@ -377,14 +377,27 @@ public sealed partial class PromptRulesViewModel : ObservableObject
         Persist();
     }
 
-    /// <summary>预览用有效阈值：全局开关开启或无覆盖时取模型默认。</summary>
+    /// <summary>预览用有效阈值：依次解析用户覆盖、模型包推荐值与全局默认。</summary>
     public double EffectiveThreshold(string? groupId, double modelDefault)
     {
-        if (!UseGlobalThreshold
-            && !string.IsNullOrEmpty(groupId)
-            && _groupThresholds.TryGetValue(groupId, out var value))
-            return value;
-        return modelDefault;
+        var rules = new ThresholdRules
+        {
+            UseGlobalThreshold = UseGlobalThreshold,
+            GroupThresholds = _groupThresholds,
+        };
+        return GroupThresholdResolver.Resolve(rules, FindGroup(groupId), modelDefault);
+    }
+
+    private GroupDescriptor? FindGroup(string? groupId)
+    {
+        if (string.IsNullOrEmpty(groupId) || _manifestGroups is null)
+            return null;
+        foreach (var group in _manifestGroups)
+        {
+            if (group is not null && string.Equals(group.Id, groupId, StringComparison.Ordinal))
+                return group;
+        }
+        return null;
     }
 
     /// <summary>新增排除标签；空值或重复忽略。</summary>

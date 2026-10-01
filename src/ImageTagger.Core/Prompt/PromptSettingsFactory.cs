@@ -38,13 +38,18 @@ public static class PromptSettingsFactory
             }
         }
 
+        // 分组推荐阈值存在时默认进入按分组模式（用户覆盖留空，回落模型包推荐值）；
+        // 否则保持单一全局阈值的首版行为。
+        var hasPackGroupThresholds = manifestGroups is not null
+            && manifestGroups.Any(group => group?.DefaultThreshold is not null);
+
         // 阈值默认全局；变换默认下划线开；输出默认 ", "/100。
         return new PromptSettings
         {
             GroupRules = rules,
             Thresholds = new ThresholdRules
             {
-                UseGlobalThreshold = true,
+                UseGlobalThreshold = !hasPackGroupThresholds,
                 GroupThresholds = new Dictionary<string, double>(StringComparer.Ordinal),
             },
             Transforms = new TransformRules

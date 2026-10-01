@@ -643,11 +643,28 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         CurrentCatalog = catalog;
         CurrentGroups = groups ?? [];
-        if (promptSettings is not null)
-            CurrentPromptSettings = promptSettings;
+        var effectiveSettings = promptSettings ?? CurrentPromptSettings;
+        // 模型包声明了分组推荐阈值且用户尚未自定义阈值规则时，用模型包默认规则播种（进入按分组阈值模式）。
+        if (ShouldSeedPackGroupThresholds(CurrentGroups, effectiveSettings))
+            effectiveSettings = Core.Prompt.PromptSettingsFactory.CreateDefault(CurrentGroups);
+        CurrentPromptSettings = effectiveSettings;
         ThresholdPercent = Math.Clamp(double.IsFinite(defaultThreshold) ? defaultThreshold : 0, 0, 1) * 100;
         ResetRules();
         SyncChildViewModels();
+    }
+
+    /// <summary>未自定义判定：空分组规则 + 全局开关 + 无分组覆盖（即默认规则从未被编辑）。</summary>
+    private static bool ShouldSeedPackGroupThresholds(
+        IReadOnlyList<Core.ModelPacks.GroupDescriptor> groups,
+        PromptSettings? settings)
+    {
+        if (groups.Count == 0 || !groups.Any(group => group?.DefaultThreshold is not null))
+            return false;
+        if (settings is null)
+            return true;
+        return settings.GroupRules.Count == 0
+            && settings.Thresholds.UseGlobalThreshold
+            && settings.Thresholds.GroupThresholds.Count == 0;
     }
 
     /// <summary>按当前分组与规则重建右侧编辑器（模型切换时调用；规则改动经 <see cref="AttachRules"/> 回流）。</summary>
@@ -703,6 +720,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public void RefreshRulesFromEditor()
     {
         CurrentPromptSettings = Rules.Current;
+        // 阈值规则可能变化（全局开关或分组覆盖），标签页需要按同一套规则重算可见集合。
+        Tags.SetThresholdRules(CurrentPromptSettings.Thresholds);
         Prompt.SetInputs(
             CurrentCatalog,
             SelectedImage?.Document.Prediction,
@@ -731,7 +750,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         var threshold = ThresholdPercent / 100;
         var prediction = SelectedImage?.Document.Prediction;
         CurrentSelection = new TagSelection();
-        Tags.SetInputs(CurrentCatalog, prediction, threshold, CurrentSelection, CurrentGroups);
+        Tags.SetInputs(CurrentCatalog, prediction, threshold, CurrentSelection, CurrentGroups, CurrentPromptSettings.Thresholds);
         Prompt.SetInputs(CurrentCatalog, prediction, CurrentSelection, threshold, CurrentPromptSettings, CurrentGroups);
         OnPropertyChanged(nameof(CurrentSelection));
         CopyVisibleTagsCommand.NotifyCanExecuteChanged();
