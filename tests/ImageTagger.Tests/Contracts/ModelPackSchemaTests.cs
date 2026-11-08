@@ -222,6 +222,48 @@ public class ModelPackSchemaTests
         AssertValid(ValidManifestV2(), SchemaV2);
 
     [Fact]
+    public void Accepts_v2_manifest_describing_wd_eva02_pipeline()
+    {
+        // v2 是 v1 的超集：同一份 WD 风格流水线（pad-to-square + bicubic +
+        // BGR + 无分组阈值）必须仍能只用 v2 声明，证明 v2 不是 PixAI 专用格式。
+        var node = JsonNode.Parse("""
+            {
+              "schemaVersion": 2,
+              "id": "wd-eva02-tagger-2026-canary",
+              "displayName": "WD EVA02 Tagger 2026 Canary",
+              "task": "multi-label-image-tagging",
+              "model": "model.onnx",
+              "groups": [
+                { "id": "rating", "name": "Rating", "displayName": "分级", "strategy": "rating" },
+                { "id": "character", "name": "Character", "displayName": "角色" },
+                { "id": "general", "name": "General", "displayName": "通用" }
+              ],
+              "input": { "name": "images", "layout": "NCHW", "dtype": "float32", "batch": "dynamic", "width": 448, "height": 448 },
+              "preprocessing": {
+                "schemaVersion": 2,
+                "steps": [
+                  { "op": "decode", "version": 1, "frame": "first", "colorManagement": "ignore" },
+                  { "op": "exif-transpose", "version": 1 },
+                  { "op": "ensure-color", "version": 1, "mode": "rgb-or-rgba-if-transparent" },
+                  { "op": "alpha-composite", "version": 1, "when": "has-alpha", "background": [255, 255, 255] },
+                  { "op": "pad-to-square", "version": 1, "anchor": "floor-center", "background": [255, 255, 255] },
+                  { "op": "resize", "version": 1, "width": 448, "height": 448, "sampler": "pillow-bicubic-v1" },
+                  { "op": "reorder-channels", "version": 1, "order": [2, 1, 0] },
+                  { "op": "cast", "version": 1, "dtype": "float32" },
+                  { "op": "divide", "version": 1, "value": 255 },
+                  { "op": "normalize", "version": 1, "mean": [0.5, 0.5, 0.5], "std": [0.5, 0.5, 0.5] },
+                  { "op": "permute", "version": 1, "order": [2, 0, 1] }
+                ]
+              },
+              "output": { "name": "logits", "activation": "sigmoid", "labelCount": 16473 },
+              "catalog": "tags.csv",
+              "defaultThreshold": 0.6094
+            }
+            """)!;
+        AssertValid(node, SchemaV2);
+    }
+
+    [Fact]
     public void V1_schema_rejects_v2_operators_and_group_thresholds()
     {
         var withFit = ValidManifest();

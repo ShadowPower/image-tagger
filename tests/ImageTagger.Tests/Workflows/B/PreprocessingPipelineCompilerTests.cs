@@ -38,6 +38,27 @@ public sealed class PreprocessingPipelineCompilerTests
     }
 
     [Fact]
+    public void Compiles_v2_pipeline_with_rectangular_geometry()
+    {
+        var steps = V2Pipeline(64).OrderedSteps.ToArray();
+        steps[4] = Step("resize-fit",
+            ("width", 48), ("height", 80), ("sampler", "pillow-bilinear-v1"), ("rounding", "floor"));
+        steps[5] = Step("pad-to-size",
+            ("width", 48), ("height", 80), ("anchor", "floor-center"), ("background", new[] { 0, 0, 0 }));
+        var pipeline = V2Pipeline(64) with { OrderedSteps = steps };
+        var input = new ModelInputTensor
+        {
+            DType = TensorDType.Float32,
+            Layout = "NCHW",
+            Shape = [3, 80, 48],
+        };
+
+        var compiled = new PreprocessingPipelineCompiler().ValidateAndCompile(pipeline, input);
+
+        Assert.Equal([3, 80, 48], compiled.PerSampleTensorContract.Shape);
+    }
+
+    [Fact]
     public void Parameter_or_input_change_produces_a_distinct_fingerprint()
     {
         var compiler = new PreprocessingPipelineCompiler();

@@ -88,7 +88,7 @@ static class Cli
             var recognition = new RecognitionService(models, services.GetRequiredService<ITagInferenceService>(), services.GetRequiredService<ISettingsStore>());
             var pack = modelPath is null ? await recognition.EnsureModelAsync(null, cancellation.Token) : await models.LoadFromPathAsync(modelPath, cancellation.Token);
             await recognition.RecognizeAllAsync(imported.Images, pack, null, cancellation.Token);
-            foreach (var image in imported.Images) WriteResult(image, pack, threshold ?? pack.Descriptor.DefaultThreshold, jsonl);
+            foreach (var image in imported.Images) WriteResult(image, pack, threshold, jsonl);
             foreach (var failure in imported.Failures) WriteFailure(failure, jsonl);
             var code = imported.Failures.Count == 0 && imported.Images.All(i => i.AnalysisState == AnalysisState.Succeeded) ? 0 : 1;
             if (outputPath is not null)
@@ -103,13 +103,25 @@ static class Cli
         catch (Exception ex) { if (jsonl) Emit(JsonSerializer.Serialize(new CliFatalErrorResult(1, "fatal_error", ex.Message), JsonContext.CliFatalErrorResult)); else Console.Error.WriteLine($"error: {ex.Message}"); return 2; }
     }
 
-    private static void WriteResult(ImageDocument image, LoadedModelPack pack, double threshold, bool jsonl)
+    private static void WriteResult(ImageDocument image, LoadedModelPack pack, double? thresholdOverride, bool jsonl)
     {
         var prediction = image.Prediction;
+        var baseThreshold = thresholdOverride ?? pack.Descriptor.DefaultThreshold;
+        var groupById = pack.Descriptor.Groups.ToDictionary(group => group.Id, StringComparer.Ordinal);
+        var groupThresholds = thresholdOverride is null
+            && pack.Descriptor.Groups.Any(group => group.DefaultThreshold is not null)
+            ? pack.Descriptor.Groups
+                .Where(group => group.DefaultThreshold is not null)
+                .ToDictionary(group => group.Id, group => group.DefaultThreshold!.Value, StringComparer.Ordinal)
+            : null;
+        double EffectiveThreshold(string groupId) =>
+            thresholdOverride
+            ?? (groupById.TryGetValue(groupId, out var group) ? group.DefaultThreshold ?? baseThreshold : baseThreshold);
+
         TagResult[] tags = prediction is null ? [] : pack.Catalog.Entries
             .Select((entry, index) => new TagResult(entry.Index, entry.OriginalName,
                 entry.ChineseTranslation, entry.DisplayGroup, prediction.Probabilities[index]))
-            .Where(tag => tag.Probability >= threshold)
+            .Where(tag => tag.Probability >= EffectiveThreshold(tag.Group))
             .OrderByDescending(tag => tag.Probability)
             .ThenBy(tag => tag.Index)
             .ToArray();
@@ -123,7 +135,7 @@ static class Cli
             image.PixelWidth,
             image.PixelHeight,
             image.FileSize,
-            threshold,
+            baseThreshold,
             new CliModelResult(
                 pack.Descriptor.Id,
                 pack.Fingerprint.Value,
@@ -134,11 +146,17 @@ static class Cli
             tags.Length,
             string.Join(", ", tags.Select(tag => tag.Name)),
             prediction?.Duration.TotalMilliseconds,
-            image.LastError);
-        if (jsonl) Emit(JsonSerializer.Serialize(result, JsonContext.CliImageResult)); else WriteHuman(image, pack, threshold, tags);
+            image.LastError,
+            groupThresholds);
+        if (jsonl) Emit(JsonSerializer.Serialize(result, JsonContext.CliImageResult)); else WriteHuman(image, pack, baseThreshold, groupThresholds, tags);
     }
 
-    private static void WriteHuman(ImageDocument image, LoadedModelPack pack, double threshold, TagResult[] tags)
+    private static void WriteHuman(
+        ImageDocument image,
+        LoadedModelPack pack,
+        double threshold,
+        IReadOnlyDictionary<string, double>? groupThresholds,
+        TagResult[] tags)
     {
         var width = 100;
         try { if (!Console.IsOutputRedirected) width = Math.Clamp(Console.WindowWidth, 60, 180); } catch { }
@@ -147,7 +165,10 @@ static class Cli
         Emit(image.FileName);
         Emit($"{image.Format.ToUpperInvariant()}  {image.PixelWidth}×{image.PixelHeight}  {FormatBytes(image.FileSize)}  │  {image.AnalysisState}  │  {image.Prediction?.Duration.TotalMilliseconds:F0} ms");
         Emit(Trim(image.CanonicalPath, width));
-        Emit($"模型 {pack.Descriptor.Id}  │  阈值 {threshold:P2}  │  标签 {tags.Length}");
+        var thresholdLabel = groupThresholds is { Count: > 0 }
+            ? "分组推荐"
+            : $"{threshold:P2}";
+        Emit($"模型 {pack.Descriptor.Id}  │  阈值 {thresholdLabel}  │  标签 {tags.Length}");
         if (tags.Length == 0) { Emit("\n未识别到达到阈值的标签。\n"); return; }
         Emit(string.Empty);
         if (width >= 96)
@@ -215,7 +236,10 @@ internal sealed record CliImageResult(
     int TagCount,
     string Prompt,
     double? DurationMs,
-    string? Error);
+    string? Error,
+    [property: System.Text.Json.Serialization.JsonIgnore(
+        Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    IReadOnlyDictionary<string, double>? GroupThresholds = null);
 internal sealed record CliFailureResult(
     int SchemaVersion,
     string Type,

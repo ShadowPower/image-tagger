@@ -188,6 +188,57 @@ public sealed class ModelPackReaderTests
             compiled.Steps.Select(step => step.Op));
     }
 
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task Loads_pack_with_fixed_batch_one(int schemaVersion)
+    {
+        using var temp = new TempDirectory($"pack-v{schemaVersion}-fixed-batch");
+        var root = CreatePack(temp, schemaVersion);
+        MutateManifest(root, node => node["input"]!["batch"] = 1);
+
+        var pack = await new ModelPackReader().LoadAsync(root, TestContext.Current.CancellationToken);
+
+        Assert.Equal("1", pack.Descriptor.Input.Batch);
+    }
+
+    [Fact]
+    public async Task Loads_v2_pack_with_wd_style_pipeline()
+    {
+        using var temp = new TempDirectory("pack-v2-wd-pipeline");
+        var root = CreatePack(temp, schemaVersion: 2);
+        MutateManifest(root, node => node["preprocessing"]!["steps"] = JsonNode.Parse("""
+            [
+              { "op": "decode", "version": 1, "frame": "first", "colorManagement": "ignore" },
+              { "op": "exif-transpose", "version": 1 },
+              { "op": "ensure-color", "version": 1, "mode": "rgb-or-rgba-if-transparent" },
+              { "op": "alpha-composite", "version": 1, "when": "has-alpha", "background": [255, 255, 255] },
+              { "op": "pad-to-square", "version": 1, "anchor": "floor-center", "background": [255, 255, 255] },
+              { "op": "resize", "version": 1, "width": 64, "height": 64, "sampler": "pillow-bicubic-v1" },
+              { "op": "reorder-channels", "version": 1, "order": [2, 1, 0] },
+              { "op": "cast", "version": 1, "dtype": "float32" },
+              { "op": "divide", "version": 1, "value": 255 },
+              { "op": "normalize", "version": 1, "mean": [0.5, 0.5, 0.5], "std": [0.5, 0.5, 0.5] },
+              { "op": "permute", "version": 1, "order": [2, 0, 1] }
+            ]
+            """));
+
+        var pack = await new ModelPackReader().LoadAsync(root, TestContext.Current.CancellationToken);
+        var compiled = new PreprocessingPipelineCompiler().ValidateAndCompile(
+            pack.Descriptor.Preprocessing,
+            new ModelInputTensor
+            {
+                DType = TensorDType.Float32,
+                Layout = pack.Descriptor.Input.Layout,
+                Shape = [3, pack.Descriptor.Input.Height, pack.Descriptor.Input.Width],
+            });
+
+        Assert.Equal(
+            ["decode", "exif-transpose", "ensure-color", "alpha-composite", "pad-to-square", "resize",
+             "reorder-channels", "cast", "divide", "normalize", "permute"],
+            compiled.Steps.Select(step => step.Op));
+    }
+
     [Fact]
     public async Task Rejects_v2_root_with_v1_preprocessing_version()
     {

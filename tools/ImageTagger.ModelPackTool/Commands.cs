@@ -169,114 +169,24 @@ public static class ValidateCommand
 
     public static List<string> Validate(string root)
     {
-        var errors = new List<string>();
-
-        // 1. required files
-        foreach (var name in PackFiles.All)
-            if (!File.Exists(Path.Combine(root, name)))
-                errors.Add($"missing file: {name}");
-        if (errors.Count > 0) return errors;
-
-        // 2. checksums
-        var expected = Checksums.Read(root);
-        foreach (var name in new[] { PackFiles.Model, PackFiles.Catalog, PackFiles.Manifest, PackFiles.License })
-        {
-            if (!expected.TryGetValue(name, out var want))
-            {
-                errors.Add($"checksums entry missing for: {name}");
-                continue;
-            }
-            var got = Checksums.Sha256(Path.Combine(root, name));
-            if (!string.Equals(got, want, StringComparison.Ordinal))
-                errors.Add($"hash mismatch for {name}: expected {want[..12]}…, got {got[..12]}…");
-        }
-        if (errors.Count > 0) return errors;
-
-        // 3. manifest
-        var manifest = JsonSerializer.Deserialize(
-            File.ReadAllText(Path.Combine(root, PackFiles.Manifest)),
-            ModelPackJsonContext.Default.ModelManifest);
-        if (manifest is null) { errors.Add("manifest unreadable"); return errors; }
-        ValidateManifest(manifest, root, errors);
-
-        // 4. catalog
-        List<CatalogRow> rows;
+        // 运行时读取器（ModelPackReader）是 manifest schema、文件哈希、目录布局与
+        // catalog 语义的唯一权威。开发工具不再维护第二套近似校验，否则会与
+        // schemaVersion 2 等新契约漂移（例如 input.batch 允许数字 1）。
         try
         {
-            rows = CatalogCsv.Read(Path.Combine(root, PackFiles.Catalog));
+            _ = new ImageTagger.Infrastructure.ModelPacks.ModelPackReader()
+                .LoadAsync(Path.GetFullPath(root), CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
+            return [];
         }
-        catch (Exception ex)
+        catch (ImageTagger.Infrastructure.ModelPacks.ModelPackValidationException exception)
         {
-            errors.Add($"catalog unreadable: {ex.Message.Split('\n')[0]}");
-            return errors;
+            return [exception.Message];
         }
-        if (manifest.Output.LabelCount != rows.Count)
-            errors.Add($"labelCount {manifest.Output.LabelCount} != catalog rows {rows.Count}");
-        for (int i = 0; i < rows.Count; i++)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            if (rows[i].Id != i)
-            {
-                errors.Add($"catalog ids must be contiguous from 0: index {i} has id {rows[i].Id}");
-                break;
-            }
+            return [exception.Message];
         }
-        var dupes = rows.GroupBy(r => r.Name).Where(g => g.Count() > 1).Select(g => g.Key).Take(3).ToList();
-        if (dupes.Count > 0) errors.Add($"duplicate tag names: {string.Join(", ", dupes)}");
-
-        var groupIds = manifest.Groups.Select(g => g.Id).ToHashSet();
-        foreach (var r in rows)
-            if (!groupIds.Contains(r.Group))
-            {
-                errors.Add($"unknown group '{r.Group}' at id {r.Id}");
-                break;
-            }
-
-        return errors;
-    }
-
-    private static void ValidateManifest(ModelManifest m, string root, List<string> errors)
-    {
-        if (m.SchemaVersion is not (ImageTagger.Core.ModelPacks.ModelDescriptor.MinimumSchemaVersion
-            or ImageTagger.Core.ModelPacks.ModelDescriptor.MaximumSchemaVersion))
-            errors.Add($"unsupported schemaVersion {m.SchemaVersion}");
-        if (string.IsNullOrWhiteSpace(m.Id)) errors.Add("manifest id empty");
-        else if (m.Id.Any(c => !char.IsAsciiLetterOrDigit(c) && c != '-'))
-            errors.Add($"manifest id has invalid characters: {m.Id}");
-
-        foreach (var (field, value) in new[] { ("model", m.Model), ("catalog", m.Catalog) })
-            ValidateSimpleFileName(field, value, errors);
-
-        if (m.Task != "multi-label-image-tagging") errors.Add($"unsupported task: {m.Task}");
-        if (m.DefaultThreshold is < 0 or > 1) errors.Add($"defaultThreshold out of range: {m.DefaultThreshold}");
-        if (m.Groups.Length == 0) errors.Add("manifest groups empty");
-        if (m.Groups.Select(g => g.Id).Distinct().Count() != m.Groups.Length)
-            errors.Add("duplicate group ids");
-        foreach (var g in m.Groups)
-            if (string.IsNullOrWhiteSpace(g.Id) || g.Id.Any(c => c is not (>= 'a' and <= 'z') and not '-'))
-                errors.Add($"invalid group id: '{g.Id}'");
-
-        if (m.Input.Layout != "NCHW") errors.Add($"unsupported input layout: {m.Input.Layout}");
-        if (m.Input.DType != "float32") errors.Add($"unsupported input dtype: {m.Input.DType}");
-        if (m.Input.Width <= 0 || m.Input.Height <= 0) errors.Add("input size must be positive");
-        if (m.Output.Activation is not ("sigmoid" or "none")) errors.Add($"unsupported activation: {m.Output.Activation}");
-        if (m.Output.LabelCount <= 0) errors.Add("output labelCount must be positive");
-
-        // preprocessing: steps present, decode first and only once, bounded count
-        var steps = m.Preprocessing.Steps;
-        if (steps.Length == 0) errors.Add("preprocessing steps empty");
-        if (steps.Length > 32) errors.Add($"too many preprocessing steps: {steps.Length}");
-        if (steps.FirstOrDefault(s => s.Op == "decode") is { } first && first != steps[0])
-            errors.Add("decode must be the first step");
-        if (steps.Count(s => s.Op == "decode") > 1) errors.Add("decode must appear exactly once");
-    }
-
-    private static void ValidateSimpleFileName(string field, string value, List<string> errors)
-    {
-        if (string.IsNullOrWhiteSpace(value)
-            || value.Contains('/')
-            || value.Contains('\\')
-            || value.Contains("..")
-            || Path.IsPathRooted(value))
-            errors.Add($"{field} must be a simple file name inside the pack: '{value}'");
     }
 }
