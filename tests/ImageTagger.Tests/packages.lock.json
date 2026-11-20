@@ -440,7 +440,6 @@
           "ImageTagger.Infrastructure": "[1.0.0, )",
           "Microsoft.Extensions.Caching.Memory": "[10.0.11, )",
           "Microsoft.Extensions.DependencyInjection": "[10.0.11, )",
-          "Microsoft.WindowsAppSDK.ML": "[2.1.74, )",
           "Serilog": "[4.4.0, )",
           "ShadUI": "[0.2.4, )"
         }
@@ -566,12 +565,6 @@
         "dependencies": {
           "Microsoft.ML.OnnxRuntime.Managed": "1.29.0"
         }
-      },
-      "Microsoft.WindowsAppSDK.ML": {
-        "type": "CentralTransitive",
-        "requested": "[2.1.74, )",
-        "resolved": "2.1.74",
-        "contentHash": "9Vd1ikH+n6pbqhgmCn+zNulJ6gIp9Hz9bC++ka1Uphh2gule6HiT6Jr25N/fQoEc4I9xOTKkn3DtlcpHlcocaw=="
       },
       "Serilog": {
         "type": "CentralTransitive",

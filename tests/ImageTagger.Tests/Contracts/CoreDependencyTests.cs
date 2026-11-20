@@ -18,7 +18,7 @@ public class CoreDependencyTests
         string[] forbidden =
         [
             "Avalonia.Base", "Avalonia.Controls", "Avalonia.ShadUI", "ShadUI",
-            "Microsoft.ML.OnnxRuntime", "Microsoft.WindowsAppSDK.ML",
+            "Microsoft.ML.OnnxRuntime", "Microsoft.Windows.AI.MachineLearning.Projection",
             "SixLabors.ImageSharp", "CsvHelper",
             "Microsoft.Extensions.DependencyInjection",
         ];

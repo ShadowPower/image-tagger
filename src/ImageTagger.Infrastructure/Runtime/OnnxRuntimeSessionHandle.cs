@@ -22,7 +22,7 @@ public sealed class OnnxRuntimeSessionHandle : IInferenceSessionHandle
     private readonly object _runLock = new();
     private bool _disposed;
 
-    public string Runtime => "ORT";
+    public string Runtime { get; }
 
     public string ExecutionProvider { get; }
 
@@ -55,7 +55,8 @@ public sealed class OnnxRuntimeSessionHandle : IInferenceSessionHandle
         string? device = null,
         int channels = 3,
         int height = 448,
-        int width = 448)
+        int width = 448,
+        string runtime = "ORT")
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentException.ThrowIfNullOrWhiteSpace(modelPath);
@@ -66,6 +67,7 @@ public sealed class OnnxRuntimeSessionHandle : IInferenceSessionHandle
         _channels = channels;
         _height = height;
         _width = width;
+        Runtime = runtime;
         ExecutionProvider = executionProvider;
         Device = device ?? $"CPU-{RuntimeInformation.ProcessArchitecture}";
 
@@ -90,6 +92,10 @@ public sealed class OnnxRuntimeSessionHandle : IInferenceSessionHandle
                 exception);
         }
     }
+
+#if WINDOWS
+    internal string EndProfiling() => _session.EndProfiling();
+#endif
 
     /// <summary>
     /// Runs one batch. <paramref name="batchInput"/> is contiguous float32

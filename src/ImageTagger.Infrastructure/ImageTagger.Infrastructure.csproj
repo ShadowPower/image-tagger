@@ -15,7 +15,7 @@
     <PackageReference Include="Serilog.Sinks.File" />
   </ItemGroup>
   <ItemGroup>
-    <!-- Inference runtime: macOS CoreML/CPU and Windows CPU baseline (ADR 0001). -->
-    <PackageReference Include="Microsoft.ML.OnnxRuntime" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Condition="'$(ImageTaggerWindowsMl)' != 'true'" />
+    <PackageReference Include="Microsoft.Windows.AI.MachineLearning" Condition="'$(ImageTaggerWindowsMl)' == 'true'" />
   </ItemGroup>
 </Project>

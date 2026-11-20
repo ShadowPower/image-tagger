@@ -9,4 +9,11 @@
     <DisableImplicitNuGetFallbackFolder>true</DisableImplicitNuGetFallbackFolder>
     <InvariantGlobalization>false</InvariantGlobalization>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'ImageTagger.App' Or '$(MSBuildProjectName)' == 'ImageTagger.Cli' Or '$(MSBuildProjectName)' == 'ImageTagger.Infrastructure' Or '$(MSBuildProjectName)' == 'ImageTagger.Tests' Or '$(MSBuildProjectName)' == 'ImageTagger.ModelPackTool'">
+    <ImageTaggerWindowsMl Condition="'$(ImageTaggerWindowsMl)' == '' And ($([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('win-')) Or ('$(RuntimeIdentifier)' == '' And $([MSBuild]::IsOSPlatform('Windows'))))">true</ImageTaggerWindowsMl>
+    <TargetFramework Condition="'$(ImageTaggerWindowsMl)' == 'true'">net10.0-windows10.0.22621.0</TargetFramework>
+    <SupportedOSPlatformVersion Condition="'$(ImageTaggerWindowsMl)' == 'true'">10.0.18362.0</SupportedOSPlatformVersion>
+    <EnableWindowsTargeting Condition="'$(ImageTaggerWindowsMl)' == 'true'">true</EnableWindowsTargeting>
+    <NuGetLockFilePath Condition="'$(ImageTaggerWindowsMl)' == 'true'">$(MSBuildProjectDirectory)/packages.windows.lock.json</NuGetLockFilePath>
+  </PropertyGroup>
 </Project>

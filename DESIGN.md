@@ -968,12 +968,11 @@ Session 创建和销毁不在 UI 线程执行。
 
 **Windows**
 
-- Windows 发行版必须使用 Windows ML（`Microsoft.WindowsAppSDK.ML`），不把普通 DirectML ORT 包作为首选实现。
+- 免安装 Windows 发行版使用独立的 Windows ML 包 `Microsoft.Windows.AI.MachineLearning` 及其配套的托管和原生 ORT，不与普通 ORT 包混装。GUI 与 CLI 使用同一推理路径。
 - Windows ML 是 Windows 维护的 ONNX Runtime，可通过 Windows 管理的 execution providers 使用 NPU、GPU 和 CPU；应用使用其官方 provider 获取/注册机制，不自行下载未知 DLL。
-- 自动策略枚举 Windows ML 可用且与当前模型兼容的认证 EP。Windows 11 24H2 及以上优先考虑硬件厂商 NPU/GPU EP；未满足条件或专用 EP 不兼容时使用 Windows ML 的 GPU/DirectML，再回退 Windows ML CPU。
-- 对本模型这种大型视觉 Transformer，“最快”不能简单等同“优先 NPU”。候选 provider 必须成功建 Session、warm-up，并用相同 Tensor 做短基准；按每秒图片数选择赢家。节能策略可在吞吐接近时优先 NPU。
-- 自动选择最多基准测试 Windows ML 推荐顺序中的前两个兼容硬件候选，总调优预算 20 秒；超时即采用目前最快的成功候选。选择过程显示一次“正在优化本机硬件”状态且结果持久缓存。
-- Windows ML 采用框架依赖或自包含部署方式在发行阶段决定；无论哪种方式，都必须在 x64 与 ARM64 真机验证。Avalonia UI 不改用 WinUI，Windows ML 仅作为 Windows 推理运行时。
+- Windows 11 24H2 及以上由 `ExecutionProviderCatalog` 获取和注册适用的认证 EP；获取失败时尝试已安装的 EP，再从 ORT 枚举 GPU/NPU 设备。DirectML 是通用 GPU 候选，无可用硬件方案时回退 CPU。
+- 自动模式最多试跑两个通过验证的厂商候选，优先覆盖不同的硬件类型，再视预算试跑 DirectML 和 CPU。用相同的 batch=1 Tensor 预热、以 ORT profiling 确认硬件 EP 执行过节点、按单次推理耗时选择。20 秒为软预算：不能中断已经进入的原生调用，没有成功候选时仍会尝试 DirectML。仅 CPU 和省电模式不触发探测。
+- 发布前仍须在 x64 与 ARM64 真机验证。Avalonia UI 不改用 WinUI，Windows ML 仅作为 Windows 推理运行时。
 
 **macOS**
 
