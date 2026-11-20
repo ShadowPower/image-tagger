@@ -53,6 +53,25 @@ static class Cli
 
     private static async Task<int> TagAsync(string[] args)
     {
+        var acceleration = AccelerationPreference.HardwarePreferred;
+        var accelerationIndex = Array.FindIndex(args, IsAccelerationOption);
+        if (accelerationIndex >= 0)
+        {
+            var parsedAcceleration = (accelerationIndex + 1 < args.Length ? args[accelerationIndex + 1].ToLowerInvariant() : null) switch
+            {
+                "hardware" => AccelerationPreference.HardwarePreferred,
+                "cpu" => AccelerationPreference.CpuOnly,
+                _ => (AccelerationPreference?)null,
+            };
+            if (parsedAcceleration is null || args.Skip(accelerationIndex + 2).Any(IsAccelerationOption))
+            {
+                Console.Error.WriteLine("--acceleration must be specified at most once with either hardware or cpu");
+                return 2;
+            }
+            acceleration = parsedAcceleration.Value;
+            args = [.. args[..accelerationIndex], .. args[(accelerationIndex + 2)..]];
+        }
+
         var jsonl = args.Any(a => a.Equals("--jsonl", StringComparison.OrdinalIgnoreCase));
         var recursive = args.Any(a => a.Equals("--recursive", StringComparison.OrdinalIgnoreCase));
         var modelPath = Option(args, "--model-pack");
@@ -66,10 +85,10 @@ static class Cli
         }
         var outputPath = Option(args, "--output");
         var inputs = args.Where(a => !a.StartsWith("--") && !a.Equals(thresholdText) && !a.Equals(modelPath) && !a.Equals(outputPath)).ToArray();
-        if (inputs.Length == 0) { Console.Error.WriteLine("usage: imagetagger [tag] <image|directory>... [--recursive] [--model-pack <dir>] [--jsonl]"); return 2; }
+        if (inputs.Length == 0) { Console.Error.WriteLine("usage: imagetagger [tag] <image|directory>... [--recursive] [--model-pack <dir>] [--acceleration <hardware|cpu>] [--jsonl]"); return 2; }
         try
         {
-            await using var services = CliComposition.Build();
+            await using var services = CliComposition.Build(acceleration);
             var importer = services.GetRequiredService<IImageImportService>();
             using var cancellation = new CancellationTokenSource();
             ConsoleCancelEventHandler? cancelHandler = null;
@@ -210,8 +229,9 @@ static class Cli
 
     private static void WriteFailure(ImageImportFailure f, bool jsonl) { if (jsonl) Emit(JsonSerializer.Serialize(new CliFailureResult(1, "image_result", "failed", f.Path, f.FileName, new CliError(f.Kind.ToString().ToLowerInvariant(), f.Message)), JsonContext.CliFailureResult)); else Console.Error.WriteLine($"{f.FileName}: {f.Message}"); }
     private static void Emit(string text) => Output.WriteLine(text);
+    private static bool IsAccelerationOption(string argument) => argument.Equals("--acceleration", StringComparison.OrdinalIgnoreCase);
     private static string? Option(string[] args, string name) { var i = Array.IndexOf(args, name); return i >= 0 && i + 1 < args.Length ? args[i + 1] : null; }
-    private static int Usage() { Console.WriteLine("usage: imagetagger [tag] <inputs...> | model <pack|validate> ..."); return 2; }
+    private static int Usage() { Console.WriteLine("usage: imagetagger [tag] <inputs...> [--acceleration <hardware|cpu>] | model <pack|validate> ..."); return 2; }
 
 }
 

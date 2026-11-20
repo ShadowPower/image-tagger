@@ -8,9 +8,8 @@ namespace ImageTagger.Infrastructure.Runtime;
 
 /// <summary>
 /// macOS CoreML/CPU runtime factory (design 14.2, C-03).
-/// Attempts ORT CoreML EP (<c>MLProgram</c>, <c>ComputeUnits=ALL</c> on Apple Silicon)
-/// and falls back to ORT CPU when enumeration, compilation, warm-up, or the first
-/// real batch fails. Returns a <see cref="FallbackInferenceSessionHandle"/> with
+/// Attempts an ORT CoreML session and falls back to ORT CPU if the session cannot
+/// be created. Returns a <see cref="FallbackInferenceSessionHandle"/> with
 /// <c>ProviderFallbackOccured=true</c> so the UI shows the real CPU EP.
 /// </summary>
 public sealed class CoreMlRuntimeFactory : IInferenceRuntimeFactory
@@ -28,7 +27,7 @@ public sealed class CoreMlRuntimeFactory : IInferenceRuntimeFactory
         ArgumentNullException.ThrowIfNull(descriptor);
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (preference is AccelerationPreference.CpuOnly or AccelerationPreference.PowerSaver
+        if (preference is not (AccelerationPreference.Auto or AccelerationPreference.HardwarePreferred)
             || !OperatingSystem.IsMacOS())
         {
             return await _cpuFallback.CreateAsync(descriptor, preference, cancellationToken).ConfigureAwait(false);
@@ -38,7 +37,7 @@ public sealed class CoreMlRuntimeFactory : IInferenceRuntimeFactory
         {
             return await TryCreateHardwareAsync(descriptor, cancellationToken).ConfigureAwait(false);
         }
-        catch (TaggerException exception) when (exception.Code == TaggerErrorCode.ProviderUnavailable)
+        catch (TaggerException exception) when (exception.Code is TaggerErrorCode.ProviderUnavailable or TaggerErrorCode.InferenceFailed)
         {
             var cpu = await _cpuFallback.CreateAsync(descriptor, preference, cancellationToken).ConfigureAwait(false);
             return new FallbackInferenceSessionHandle(cpu, fallbackOccurred: true);
@@ -72,8 +71,6 @@ public sealed class CoreMlRuntimeFactory : IInferenceRuntimeFactory
             };
             try
             {
-                // Apple Silicon: MLProgram + CPU/GPU (+ANE via the EP scheduler);
-                // Intel Macs expose CPU/GPU only — CoreML itself hides absent ANE.
                 options.AppendExecutionProvider_CoreML(
                     CoreMLFlags.COREML_FLAG_CREATE_MLPROGRAM | CoreMLFlags.COREML_FLAG_USE_CPU_AND_GPU);
             }

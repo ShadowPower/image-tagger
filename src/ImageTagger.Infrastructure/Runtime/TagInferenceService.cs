@@ -21,6 +21,7 @@ public sealed class TagInferenceService : ITagInferenceService, ITaggerModelAdap
     private readonly IPreprocessingExecutor _executor;
     private readonly AccelerationPreference _preference;
     private readonly ISettingsStore? _settings;
+    private readonly bool _retryWithCpuOnInferenceFailure;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private IInferenceSessionHandle? _session;
     private string? _loadedFingerprint;
@@ -30,8 +31,9 @@ public sealed class TagInferenceService : ITagInferenceService, ITaggerModelAdap
     public TagInferenceService(
         IInferenceRuntimeFactory factory,
         IPreprocessingExecutor executor,
-        AccelerationPreference preference = AccelerationPreference.Auto,
-        ISettingsStore? settings = null)
+        AccelerationPreference preference = AccelerationPreference.HardwarePreferred,
+        ISettingsStore? settings = null,
+        bool retryWithCpuOnInferenceFailure = false)
     {
         ArgumentNullException.ThrowIfNull(factory);
         ArgumentNullException.ThrowIfNull(executor);
@@ -39,6 +41,7 @@ public sealed class TagInferenceService : ITagInferenceService, ITaggerModelAdap
         _executor = executor;
         _preference = preference;
         _settings = settings;
+        _retryWithCpuOnInferenceFailure = retryWithCpuOnInferenceFailure;
     }
 
     public bool IsLoaded(ModelPackFingerprint fingerprint) =>
@@ -129,7 +132,20 @@ public sealed class TagInferenceService : ITagInferenceService, ITaggerModelAdap
             var logits = new float[labelCount];
             // Native ORT calls cannot be aborted mid-flight; on cancellation the
             // caller discards the result (queue checks CT before write-back).
-            session.Run(inputMemory.Span, 1, logits.AsSpan());
+            try
+            {
+                session.Run(inputMemory.Span, 1, logits.AsSpan());
+            }
+            catch (TaggerException exception) when (_retryWithCpuOnInferenceFailure
+                && exception.Code == TaggerErrorCode.InferenceFailed
+                && preference != AccelerationPreference.CpuOnly
+                && !string.Equals(session.ExecutionProvider, "CPU", StringComparison.OrdinalIgnoreCase))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await EnsureSessionAsync(pack, preference, cancellationToken, useCpu: true).ConfigureAwait(false);
+                session = _session ?? throw new TaggerException(TaggerErrorCode.InferenceFailed, "CPU 推理会话不可用。");
+                session.Run(inputMemory.Span, 1, logits.AsSpan());
+            }
             cancellationToken.ThrowIfCancellationRequested();
 
             SigmoidPostprocessor.ValidateLength(logits.Length, labelCount);
@@ -162,9 +178,10 @@ public sealed class TagInferenceService : ITagInferenceService, ITaggerModelAdap
     private async Task EnsureSessionAsync(
         LoadedModelPack pack,
         AccelerationPreference preference,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool useCpu = false)
     {
-        if (IsLoaded(pack.Fingerprint) && _loadedPreference == preference)
+        if (!useCpu && IsLoaded(pack.Fingerprint) && _loadedPreference == preference)
             return;
 
         _session?.Dispose();
@@ -173,7 +190,7 @@ public sealed class TagInferenceService : ITagInferenceService, ITaggerModelAdap
         _loadedPreference = null;
 
         var handle = await _factory.CreateAsync(
-            pack.Descriptor, preference, cancellationToken).ConfigureAwait(false);
+            pack.Descriptor, useCpu ? AccelerationPreference.CpuOnly : preference, cancellationToken).ConfigureAwait(false);
 
         try
         {

@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Data;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
+using ImageTagger.App.Resources;
 using ImageTagger.Core.Domain;
 
 namespace ImageTagger.App.Controls;
@@ -114,9 +115,9 @@ public sealed class AccelerationPreferenceDisplayConverter : IValueConverter
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         value switch
         {
-            AccelerationPreference.Auto => "自动",
-            AccelerationPreference.PowerSaver => "节能优先",
-            AccelerationPreference.CpuOnly => "仅 CPU",
+            AccelerationPreference.Auto => Strings.Settings_AccelerationAuto,
+            AccelerationPreference.HardwarePreferred => Strings.Settings_AccelerationHardwarePreferred,
+            AccelerationPreference.CpuOnly => Strings.Settings_AccelerationCpuOnly,
             _ => value?.ToString(),
         };
 

@@ -9,19 +9,20 @@ namespace ImageTagger.Tests.Workflows.C;
 public sealed class RuntimeFactorySelectorTests
 {
     [Fact]
-    public void CpuOnly_and_PowerSaver_always_select_cpu()
+    public void CpuOnly_always_selects_cpu()
     {
         var (cpu, windows, coreMl) = RuntimeFactorySelector.CreateDefault();
         Assert.Same(cpu, RuntimeFactorySelector.Select(AccelerationPreference.CpuOnly, cpu, windows, coreMl));
-        Assert.Same(cpu, RuntimeFactorySelector.Select(AccelerationPreference.PowerSaver, cpu, windows, coreMl));
     }
 
-    [Fact]
-    public void Auto_selects_the_platform_hardware_factory_with_cpu_fallback()
+    [Theory]
+    [InlineData(AccelerationPreference.Auto)]
+    [InlineData(AccelerationPreference.HardwarePreferred)]
+    public void Acceleration_modes_select_the_platform_hardware_factory_with_cpu_fallback(AccelerationPreference preference)
     {
         var (cpu, windows, coreMl) = RuntimeFactorySelector.CreateDefault();
         IInferenceRuntimeFactory selected =
-            RuntimeFactorySelector.Select(AccelerationPreference.Auto, cpu, windows, coreMl);
+            RuntimeFactorySelector.Select(preference, cpu, windows, coreMl);
 
         if (OperatingSystem.IsWindows())
             Assert.Same(windows, selected);

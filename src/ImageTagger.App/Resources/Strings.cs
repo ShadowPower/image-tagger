@@ -43,8 +43,8 @@ public static class Strings
     public const string Settings_ThemeFollowSystem = "跟随系统";
     public const string Settings_ThemeLight = "浅色";
     public const string Settings_ThemeDark = "深色";
-    public const string Settings_AccelerationAuto = "自动";
-    public const string Settings_AccelerationPowerSaver = "节能优先";
+    public const string Settings_AccelerationAuto = "自动选择";
+    public const string Settings_AccelerationHardwarePreferred = "硬件加速";
     public const string Settings_AccelerationCpuOnly = "仅 CPU";
 
     public const string Error_ModelPackInvalid = "模型包无效，无法加载";

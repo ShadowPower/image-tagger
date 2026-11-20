@@ -191,8 +191,29 @@ public sealed class SettingsStore : ISettingsStore
             MaxDepth = 32,
         };
         options.Converters.Add(new JsonStringEnumConverter<ThemePreference>(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
-        options.Converters.Add(new JsonStringEnumConverter<AccelerationPreference>(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
+        options.Converters.Add(new AccelerationPreferenceConverter());
         return options;
+    }
+
+    private sealed class AccelerationPreferenceConverter : JsonConverter<AccelerationPreference>
+    {
+        public override AccelerationPreference Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+            (reader.TokenType == JsonTokenType.String ? reader.GetString()?.Trim().ToLowerInvariant() : null) switch
+            {
+                "auto" => AccelerationPreference.Auto,
+                "hardwarepreferred" => AccelerationPreference.HardwarePreferred,
+                "cpuonly" or "powersaver" => AccelerationPreference.CpuOnly,
+                _ => throw new JsonException("Unknown acceleration preference."),
+            };
+
+        public override void Write(Utf8JsonWriter writer, AccelerationPreference value, JsonSerializerOptions options) =>
+            writer.WriteStringValue(value switch
+            {
+                AccelerationPreference.Auto => "auto",
+                AccelerationPreference.HardwarePreferred => "hardwarePreferred",
+                AccelerationPreference.CpuOnly => "cpuOnly",
+                _ => throw new JsonException("Unknown acceleration preference."),
+            });
     }
 
     internal sealed record SettingsEnvelope

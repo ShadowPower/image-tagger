@@ -41,7 +41,7 @@ public sealed class WindowsMlRuntimeFactoryTests
         var selected = RuntimeFactorySelector.Select(AccelerationPreference.Auto, cpu, windows, coreMl);
         Assert.Same(windows, selected);
         Assert.Same(cpu, RuntimeFactorySelector.Select(AccelerationPreference.CpuOnly, cpu, windows, coreMl));
-        Assert.Same(cpu, RuntimeFactorySelector.Select(AccelerationPreference.PowerSaver, cpu, windows, coreMl));
+        Assert.Same(windows, RuntimeFactorySelector.Select(AccelerationPreference.HardwarePreferred, cpu, windows, coreMl));
     }
 
     [Fact]
@@ -75,8 +75,10 @@ public sealed class WindowsMlRuntimeFactoryTests
         TestContext.Current.SendDiagnosticMessage($"{session.ExecutionProvider} on {session.Device}");
     }
 
-    [Fact]
-    public async Task Auto_executes_model_with_the_selected_provider()
+    [Theory]
+    [InlineData(AccelerationPreference.Auto)]
+    [InlineData(AccelerationPreference.HardwarePreferred)]
+    public async Task Acceleration_mode_executes_model_with_the_selected_provider(AccelerationPreference preference)
     {
         if (Environment.GetEnvironmentVariable("IMAGETAGGER_TEST_WINDOWS_ACCELERATION") != "1")
             Assert.Skip("Set IMAGETAGGER_TEST_WINDOWS_ACCELERATION=1 to test automatic selection.");
@@ -85,13 +87,21 @@ public sealed class WindowsMlRuntimeFactoryTests
         string modelPath = WriteAddModel(temporary);
         var factory = new WindowsMlRuntimeFactory(_ => modelPath);
         using var session = await factory.CreateAsync(
-            AddModelDescriptor(), AccelerationPreference.Auto, TestContext.Current.CancellationToken);
+            AddModelDescriptor(), preference, TestContext.Current.CancellationToken);
+        if (preference == AccelerationPreference.HardwarePreferred)
+        {
+            Assert.Equal("Windows ML", session.Runtime);
+            Assert.NotEqual("CPU", session.ExecutionProvider);
+        }
         AssertDoublesInput(session);
-        TestContext.Current.SendDiagnosticMessage($"Auto selected {session.ExecutionProvider} on {session.Device}");
+        TestContext.Current.SendDiagnosticMessage($"{preference} selected {session.ExecutionProvider} on {session.Device}");
     }
 
-    [Fact]
-    public async Task Auto_falls_back_to_cpu_if_no_hardware_nodes_run()
+    [Theory]
+    [InlineData(AccelerationPreference.Auto, true)]
+    [InlineData(AccelerationPreference.HardwarePreferred, true)]
+    [InlineData(AccelerationPreference.HardwarePreferred, false)]
+    public async Task Only_benchmarked_hardware_selection_requires_profiled_nodes(AccelerationPreference preference, bool benchmarkHardware)
     {
         if (Environment.GetEnvironmentVariable("IMAGETAGGER_TEST_WINDOWS_ACCELERATION") != "1")
             Assert.Skip("Set IMAGETAGGER_TEST_WINDOWS_ACCELERATION=1 to test automatic selection.");
@@ -101,11 +111,19 @@ public sealed class WindowsMlRuntimeFactoryTests
             "CAg6UBIMcGFzc190aHJvdWdoWh8KBWlucHV0EhYKFAgBEhAKAggBCgIIAwoCCAIKAggCYh8KBWlucHV0EhYKFAgBEhAKAggBCgIIAwoCCAIKAggCQgIQDQ=="));
         var descriptor = AddModelDescriptor();
         descriptor = descriptor with { Output = descriptor.Output with { Name = descriptor.Input.Name } };
-        var factory = new WindowsMlRuntimeFactory(_ => modelPath);
+        var factory = new WindowsMlRuntimeFactory(_ => modelPath, benchmarkHardware);
 
-        using var session = await factory.CreateAsync(descriptor, AccelerationPreference.Auto, TestContext.Current.CancellationToken);
-        Assert.True(Assert.IsType<FallbackInferenceSessionHandle>(session).ProviderFallbackOccured);
-        Assert.Equal("CPU", session.ExecutionProvider);
+        using var session = await factory.CreateAsync(descriptor, preference, TestContext.Current.CancellationToken);
+        if (benchmarkHardware)
+        {
+            Assert.True(Assert.IsType<FallbackInferenceSessionHandle>(session).ProviderFallbackOccured);
+            Assert.Equal("CPU", session.ExecutionProvider);
+        }
+        else
+        {
+            Assert.Equal("Windows ML", session.Runtime);
+            Assert.NotEqual("CPU", session.ExecutionProvider);
+        }
         float[] input = Enumerable.Range(0, 12).Select(value => (float)value).ToArray();
         var output = new float[input.Length];
         session.Run(input, 1, output);

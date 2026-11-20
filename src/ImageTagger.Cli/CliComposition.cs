@@ -1,3 +1,4 @@
+using ImageTagger.Core.Domain;
 using ImageTagger.Core.ModelPacks;
 using ImageTagger.Core.Pipelines;
 using ImageTagger.Core.Services;
@@ -13,7 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 internal static class CliComposition
 {
-    public static ServiceProvider Build()
+    public static ServiceProvider Build(AccelerationPreference acceleration)
     {
         var services = new ServiceCollection();
         services.AddSingleton<IAppResourceLocator, AppResourceLocator>();
@@ -30,13 +31,14 @@ internal static class CliComposition
             {
                 return descriptor.ModelFile;
             }
-            var (cpu, windows, coreMl) = RuntimeFactorySelector.CreateDefault(ResolveModelPath);
+            var (cpu, windows, coreMl) = RuntimeFactorySelector.CreateDefault(ResolveModelPath, benchmarkWindowsHardware: false);
             return new AdaptiveInferenceRuntimeFactory(cpu, windows, coreMl);
         });
         services.AddSingleton<ITagInferenceService>(provider => new TagInferenceService(
             provider.GetRequiredService<IInferenceRuntimeFactory>(),
             provider.GetRequiredService<IPreprocessingExecutor>(),
-            settings: provider.GetRequiredService<ISettingsStore>()));
+            preference: acceleration,
+            retryWithCpuOnInferenceFailure: true));
         services.AddSingleton<ILogService>(provider => LoggingSetup.CreateLogService(provider.GetRequiredService<IAppResourceLocator>().LogsRoot));
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
     }

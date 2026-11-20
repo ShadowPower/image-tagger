@@ -745,7 +745,7 @@ Prompt 每次按以下固定流水线生成：
 
 首版不向用户暴露 batch、线程数、预处理并行度或缓存大小等底层旋钮，避免无效组合和支持成本。这些参数全部由运行时按设备、provider、模型和内存压力自动决定。设置页只提供：
 
-- 加速策略：自动（默认）、节能优先、仅 CPU。
+- 加速策略：硬件加速（默认，优先 GPU/NPU，不可用时回退 CPU）、自动选择、仅 CPU。
 - “重新检测性能”：清除当前设备的 provider/batch 调优结果并在下次识别时重新测量。
 - “清除内存缓存”：清理缩略图和当前会话推理结果，不删除图片、模型或设置。
 
@@ -968,10 +968,11 @@ Session 创建和销毁不在 UI 线程执行。
 
 **Windows**
 
-- 免安装 Windows 发行版使用独立的 Windows ML 包 `Microsoft.Windows.AI.MachineLearning` 及其配套的托管和原生 ORT，不与普通 ORT 包混装。GUI 与 CLI 使用同一推理路径。
+- 免安装 Windows 发行版使用独立的 Windows ML 包 `Microsoft.Windows.AI.MachineLearning` 及其配套的托管和原生 ORT，不与普通 ORT 包混装。GUI 与 CLI 共用运行时，设备选择策略不同。
 - Windows ML 是 Windows 维护的 ONNX Runtime，可通过 Windows 管理的 execution providers 使用 NPU、GPU 和 CPU；应用使用其官方 provider 获取/注册机制，不自行下载未知 DLL。
 - Windows 11 24H2 及以上由 `ExecutionProviderCatalog` 获取和注册适用的认证 EP；获取失败时尝试已安装的 EP，再从 ORT 枚举 GPU/NPU 设备。DirectML 是通用 GPU 候选，无可用硬件方案时回退 CPU。
-- 自动模式最多试跑两个通过验证的厂商候选，优先覆盖不同的硬件类型，再视预算试跑 DirectML 和 CPU。用相同的 batch=1 Tensor 预热、以 ORT profiling 确认硬件 EP 执行过节点、按单次推理耗时选择。20 秒为软预算：不能中断已经进入的原生调用，没有成功候选时仍会尝试 DirectML。仅 CPU 和省电模式不触发探测。
+- GUI 的自动选择和硬件加速都最多试跑两个通过验证的厂商候选，优先覆盖不同的硬件类型，再视预算试跑 DirectML。用相同的 batch=1 Tensor 预热、以 ORT profiling 确认硬件 EP 执行过节点、按单次推理耗时选择。自动选择在预算允许时也与 CPU 比较；硬件加速只在无可用硬件方案时回退 CPU。20 秒为软预算：不能中断已经进入的原生调用，没有成功候选时仍会尝试 DirectML。仅 CPU 模式不触发探测。
+- CLI 只接受硬件加速（默认）和仅 CPU。硬件加速使用第一个可创建模型会话的硬件候选，不预热、测速或采集节点执行记录。硬件无法初始化，或真实图片的推理调用失败时，切换至 CPU；失败的图片用 CPU 重试一次，后续图片复用 CPU 会话。
 - 发布前仍须在 x64 与 ARM64 真机验证。Avalonia UI 不改用 WinUI，Windows ML 仅作为 Windows 推理运行时。
 
 **macOS**

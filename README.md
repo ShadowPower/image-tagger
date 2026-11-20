@@ -54,15 +54,19 @@ my-model/
 
 ### Windows 推理加速
 
-GUI 和 CLI 默认使用“自动”模式，无需手动指定 GPU 或 NPU。Windows 11 24H2（内部版本 26100）及以上会通过 Windows ML 发现、获取并注册适用的硬件提供程序；首次获取可能需要联网。下载的是推理提供程序，不会上传图片或模型。Windows 10 1903 及以上还可使用支持 DirectX 12 的 GPU 通过 DirectML 加速。
+GUI 和 CLI 默认使用“硬件加速”，无需手动指定 GPU 或 NPU。Windows 11 24H2（内部版本 26100）及以上会通过 Windows ML 发现、获取并注册适用的硬件提供程序；首次获取可能需要联网。下载的是推理提供程序，不会上传图片或模型。Windows 10 1903 及以上还可使用支持 DirectX 12 的 GPU 通过 DirectML 加速。
 
-软件会用当前模型试跑，跳过不兼容或实际没有执行模型节点的加速方案，并在试跑预算允许时与 CPU 比较。只有兼容性和性能合适的方案才会入选；没有可用的加速方案时自动回退到 CPU。“仅 CPU”和“省电”模式不探测或下载硬件提供程序。
+GUI 提供三种策略：
+
+- **自动选择**：用当前模型试跑，跳过不兼容或没有实际执行模型节点的硬件方案；预算允许时与 CPU 比较，选试跑最快的方案。
+- **硬件加速**：优先选择通过试跑的 GPU 或 NPU，不与 CPU 比速度；没有可用硬件方案时回退 CPU。
+- **仅 CPU**：不探测或下载硬件提供程序。旧版“节能优先”设置会按“仅 CPU”读取。
 
 ## CLI 使用
 
 ```powershell
 dotnet run --project src/ImageTagger.Cli -- tag <图片或目录> `
-  --model-pack <模型包目录> [--recursive] [--threshold <0..1>]
+  --model-pack <模型包目录> [--recursive] [--threshold <0..1>] [--acceleration <hardware|cpu>]
 ```
 
 输出 JSON Lines：
@@ -72,7 +76,7 @@ dotnet run --project src/ImageTagger.Cli -- tag <图片或目录> `
   --model-pack <模型包目录> --jsonl [--output <文件>]
 ```
 
-未提供 `--model-pack` 时，CLI 会尝试使用 GUI 保存的模型目录配置。
+CLI 不预热、不试跑测速，也不读取 GUI 的加速策略。`--acceleration hardware`（默认）直接使用第一个可初始化的硬件方案；硬件无法初始化或实际执行失败时回退 CPU。`--acceleration cpu` 只使用 CPU。未提供 `--model-pack` 时，CLI 仍会尝试使用 GUI 保存的模型目录配置。
 
 ## 支持格式
 

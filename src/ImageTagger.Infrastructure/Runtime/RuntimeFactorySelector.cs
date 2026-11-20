@@ -5,9 +5,8 @@ namespace ImageTagger.Infrastructure.Runtime;
 
 /// <summary>
 /// Maps <see cref="AccelerationPreference"/> (settings) to the runtime factory
-/// (design 11.3, C-01..C-03): Auto tries hardware then CPU, PowerSaver prefers
-/// CPU, CpuOnly always uses CPU. Factories themselves own the CPU fallback, so
-/// this selector never throws for missing hardware.
+/// (design 11.3, C-01..C-03). Auto and HardwarePreferred use the platform
+/// factory, which owns provider selection and CPU fallback.
 /// </summary>
 public static class RuntimeFactorySelector
 {
@@ -24,8 +23,7 @@ public static class RuntimeFactorySelector
         return preference switch
         {
             AccelerationPreference.CpuOnly => cpu,
-            AccelerationPreference.PowerSaver => cpu,
-            AccelerationPreference.Auto => OperatingSystem.IsWindows() ? windowsMl
+            AccelerationPreference.Auto or AccelerationPreference.HardwarePreferred => OperatingSystem.IsWindows() ? windowsMl
                 : OperatingSystem.IsMacOS() ? coreMl
                 : cpu,
             _ => cpu,
@@ -34,10 +32,11 @@ public static class RuntimeFactorySelector
 
     /// <summary>Builds the default factory trio sharing one model-path resolver.</summary>
     public static (IInferenceRuntimeFactory Cpu, IInferenceRuntimeFactory Windows, IInferenceRuntimeFactory CoreMl)
-        CreateDefault(Func<ImageTagger.Core.ModelPacks.ModelDescriptor, string>? modelPathResolver = null) =>
+        CreateDefault(Func<ImageTagger.Core.ModelPacks.ModelDescriptor, string>? modelPathResolver = null,
+            bool benchmarkWindowsHardware = true) =>
         (
             new CpuInferenceRuntimeFactory(modelPathResolver),
-            new WindowsMlRuntimeFactory(modelPathResolver),
+            new WindowsMlRuntimeFactory(modelPathResolver, benchmarkWindowsHardware),
             new CoreMlRuntimeFactory(modelPathResolver)
         );
 }

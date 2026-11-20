@@ -14,6 +14,44 @@ namespace ImageTagger.Tests.Workflows.C;
 public sealed class TagInferenceServiceTests
 {
     [Fact]
+    public async Task Failed_hardware_inference_retries_the_same_image_on_cpu_and_reuses_its_session()
+    {
+        var pack = TestPack(labelCount: 6);
+        var image = TestImage();
+        var hardware = new StubHandle(6, provider: "DmlExecutionProvider", failsInference: true);
+        var cpu = new StubHandle(6);
+        var factory = new QueueFactory([hardware, cpu]);
+        var executor = new StubExecutor(pack.Pipeline.PerSampleTensorContract.ElementCount);
+        using var service = new TagInferenceService(factory, executor, retryWithCpuOnInferenceFailure: true);
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        var first = await service.InferAsync(image, pack, cancellationToken);
+        Assert.Equal("CPU", first.ExecutionProvider);
+        Assert.Equal(1, executor.Calls);
+        Assert.True(hardware.Disposed);
+
+        var next = await service.InferAsync(TestImage(), pack, cancellationToken);
+        Assert.Equal("CPU", next.ExecutionProvider);
+        Assert.Equal([AccelerationPreference.HardwarePreferred, AccelerationPreference.CpuOnly], factory.Preferences);
+        Assert.False(cpu.Disposed);
+    }
+
+    [Fact]
+    public async Task Cpu_only_does_not_retry_a_failed_inference()
+    {
+        var pack = TestPack(labelCount: 6);
+        var factory = new QueueFactory([new StubHandle(6, failsInference: true)]);
+        using var service = new TagInferenceService(factory, new FlexibleExecutor(),
+            AccelerationPreference.CpuOnly, retryWithCpuOnInferenceFailure: true);
+
+        var exception = await Assert.ThrowsAsync<TaggerException>(() =>
+            service.InferAsync(TestImage(), pack, TestContext.Current.CancellationToken));
+
+        Assert.Equal(TaggerErrorCode.InferenceFailed, exception.Code);
+        Assert.Equal([AccelerationPreference.CpuOnly], factory.Preferences);
+    }
+
+    [Fact]
     public async Task Infer_returns_atomic_snapshot_without_copying_label_text()
     {
         var pack = TestPack(labelCount: 6);
@@ -137,17 +175,20 @@ public sealed class TagInferenceServiceTests
         PixelHeight = 8,
     };
 
-    internal sealed class StubHandle(int labelCount, int? actualOutput = null) : IInferenceSessionHandle
+    internal sealed class StubHandle(int labelCount, int? actualOutput = null, string provider = "CPU", bool failsInference = false)
+        : IInferenceSessionHandle
     {
         private readonly int _expected = labelCount;
         private readonly int _actual = actualOutput ?? labelCount;
         public bool Disposed { get; private set; }
         public string Runtime => "fake-ort";
-        public string ExecutionProvider => "CPU";
+        public string ExecutionProvider => provider;
         public string Device => "CPU-X64";
 
         public void Run(ReadOnlySpan<float> batchInput, int batchSamples, Span<float> logits)
         {
+            if (failsInference)
+                throw new TaggerException(TaggerErrorCode.InferenceFailed, "test inference failure");
             if (logits.Length != _expected)
                 throw new TaggerException(TaggerErrorCode.ModelIncompatible, "test buffer mismatch");
             if (_actual != _expected)
@@ -207,12 +248,13 @@ public sealed class TagInferenceServiceTests
         {
         }
 
-        public int Calls { get; private set; }
+        public int Calls => Preferences.Count;
+        public List<AccelerationPreference> Preferences { get; } = [];
 
         public Task<IInferenceSessionHandle> CreateAsync(
             ModelDescriptor descriptor, AccelerationPreference preference, CancellationToken cancellationToken)
         {
-            Calls++;
+            Preferences.Add(preference);
             return Task.FromResult(handles.Dequeue());
         }
     }

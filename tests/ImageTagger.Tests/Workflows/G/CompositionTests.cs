@@ -1,5 +1,6 @@
 using ImageTagger.App.Composition;
 using ImageTagger.App.ViewModels;
+using ImageTagger.Core.Domain;
 using ImageTagger.Core.Services;
 using ImageTagger.Tests.TestInfrastructure;
 using Microsoft.Extensions.Caching.Memory;
@@ -24,7 +25,10 @@ public sealed class CompositionTests
         Assert.NotNull(provider.GetRequiredService<ITagInferenceService>());
         Assert.NotNull(provider.GetRequiredService<IMemoryCache>());
         Assert.NotNull(provider.GetRequiredService<MainViewModel>());
-        Assert.NotNull(provider.GetRequiredService<SettingsViewModel>());
+        var settings = provider.GetRequiredService<SettingsViewModel>();
+        Assert.Equal(
+            [AccelerationPreference.Auto, AccelerationPreference.HardwarePreferred, AccelerationPreference.CpuOnly],
+            settings.AvailableAccelerations);
     }
 
     /// <summary>

@@ -15,6 +15,17 @@ public sealed class SettingsStoreTests
         var settings = new SettingsStore(temp.FullPath).Load();
 
         Assert.Equal(new AppSettings(), settings);
+        Assert.Equal(AccelerationPreference.HardwarePreferred, settings.Acceleration);
+    }
+
+    [Fact]
+    public void Saved_auto_selection_is_not_replaced_by_the_new_default()
+    {
+        using var temp = new TempDirectory("settings-auto");
+        var store = new SettingsStore(temp.FullPath);
+        store.Save(new AppSettings { Acceleration = AccelerationPreference.Auto });
+
+        Assert.Equal(AccelerationPreference.Auto, store.Load().Acceleration);
     }
 
     [Fact]
@@ -30,7 +41,7 @@ public sealed class SettingsStoreTests
             RecursiveFolderScan = true,
             RestoreWindowLayout = false,
             ShowChineseTranslation = false,
-            Acceleration = AccelerationPreference.PowerSaver,
+            Acceleration = AccelerationPreference.HardwarePreferred,
             WindowLayout = new WindowLayoutSettings
             {
                 WindowWidth = 1280,
@@ -48,6 +59,7 @@ public sealed class SettingsStoreTests
         Assert.Equal(expected, store.Load());
         var json = File.ReadAllText(Path.Combine(temp.FullPath, SettingsStore.FileName));
         Assert.Contains($"\"schemaVersion\": {SettingsStore.CurrentSchemaVersion}", json, StringComparison.Ordinal);
+        Assert.Contains("\"acceleration\": \"hardwarePreferred\"", json, StringComparison.Ordinal);
         Assert.DoesNotContain("prompt", json, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(Directory.EnumerateFiles(temp.FullPath, "*.tmp"));
     }
@@ -87,9 +99,33 @@ public sealed class SettingsStoreTests
     }
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Former_power_saver_migrates_to_cpu_only_without_resetting_other_settings(bool versioned)
+    {
+        using var temp = new TempDirectory("settings-power-saver");
+        var store = new SettingsStore(temp.FullPath);
+        store.Save(new AppSettings { Theme = ThemePreference.Dark, Acceleration = AccelerationPreference.CpuOnly });
+        var settingsPath = Path.Combine(temp.FullPath, SettingsStore.FileName);
+        using var savedDocument = JsonDocument.Parse(File.ReadAllText(settingsPath));
+        var legacy = versioned ? savedDocument.RootElement : savedDocument.RootElement.GetProperty("settings");
+        File.WriteAllText(settingsPath, legacy.GetRawText().Replace("\"cpuOnly\"", "\"powerSaver\"", StringComparison.Ordinal));
+
+        var settings = store.Load();
+
+        Assert.Equal(AccelerationPreference.CpuOnly, settings.Acceleration);
+        Assert.Equal(ThemePreference.Dark, settings.Theme);
+        store.Save(settings);
+        var saved = Assert.Single(Directory.EnumerateFiles(temp.FullPath));
+        Assert.Contains("\"acceleration\": \"cpuOnly\"", File.ReadAllText(saved), StringComparison.Ordinal);
+    }
+
+    [Theory]
     [InlineData("{not-json")]
     [InlineData("{\"schemaVersion\":99,\"settings\":{}}")]
     [InlineData("{\"schemaVersion\":1,\"settings\":{\"unknown\":true}}")]
+    [InlineData("""{"schemaVersion":1,"settings":{"acceleration":1}}""")]
+    [InlineData("""{"schemaVersion":1,"settings":{"acceleration":"unknown"}}""")]
     public void Invalid_or_unsupported_settings_are_preserved_and_defaults_restored(string content)
     {
         using var temp = new TempDirectory("settings-corrupt");

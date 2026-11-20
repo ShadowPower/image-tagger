@@ -4,7 +4,7 @@ namespace ImageTagger.Core.Domain;
 public enum AccelerationPreference
 {
     Auto,
-    PowerSaver,
+    HardwarePreferred,
     CpuOnly,
 }
 
@@ -50,7 +50,7 @@ public sealed record AppSettings
 
     public bool ShowChineseTranslation { get; init; } = true;
 
-    public AccelerationPreference Acceleration { get; init; } = AccelerationPreference.Auto;
+    public AccelerationPreference Acceleration { get; init; } = AccelerationPreference.HardwarePreferred;
 
     /// <summary>
     /// Last usable window layout. Consumers honor it only when

@@ -39,8 +39,8 @@
   <data name="Settings_ThemeFollowSystem" xml:space="preserve"><value>跟随系统</value></data>
   <data name="Settings_ThemeLight" xml:space="preserve"><value>浅色</value></data>
   <data name="Settings_ThemeDark" xml:space="preserve"><value>深色</value></data>
-  <data name="Settings_AccelerationAuto" xml:space="preserve"><value>自动</value></data>
-  <data name="Settings_AccelerationPowerSaver" xml:space="preserve"><value>节能优先</value></data>
+  <data name="Settings_AccelerationAuto" xml:space="preserve"><value>自动选择</value></data>
+  <data name="Settings_AccelerationHardwarePreferred" xml:space="preserve"><value>硬件加速</value></data>
   <data name="Settings_AccelerationCpuOnly" xml:space="preserve"><value>仅 CPU</value></data>
   <data name="Error_ModelPackInvalid" xml:space="preserve"><value>模型包无效，无法加载</value></data>
   <data name="Error_ModelPackCorrupt" xml:space="preserve"><value>模型文件已损坏，建议重新安装应用</value></data>

@@ -45,7 +45,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     public IReadOnlyList<ThemePreference> AvailableThemes { get; } =
         [ThemePreference.FollowSystem, ThemePreference.Light, ThemePreference.Dark];
     public IReadOnlyList<AccelerationPreference> AvailableAccelerations { get; } =
-        [AccelerationPreference.Auto, AccelerationPreference.PowerSaver, AccelerationPreference.CpuOnly];
+        [AccelerationPreference.Auto, AccelerationPreference.HardwarePreferred, AccelerationPreference.CpuOnly];
     public string AccelerationNote => Strings.Settings_ImmediateEffective;
 
     [ObservableProperty] private string _modelPackPath = string.Empty;
